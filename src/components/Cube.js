@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import PropTypes from 'prop-types';
 import { getTouchPositions } from '../utilities/utilities';
 export const cubeWidth = 50;
 export const faceArray = ['front', 'back', 'top', 'bottom', 'left', 'right'];
@@ -17,37 +18,54 @@ const colorOrder = ['#B90000', '#0045AD', '#FF5900', '#FFFFFF', '#FFD500', '#009
 class Cube extends Component {
 
     static propTypes = {
-        translate: React.PropTypes.array,
-        orientation: React.PropTypes.array,
-        onFaceClick: React.PropTypes.func,
-        index: React.PropTypes.number
+        translate: PropTypes.array.isRequired,
+        orientation: PropTypes.array.isRequired,
+        onFaceClick: PropTypes.func.isRequired,
+        index: PropTypes.number.isRequired,
+        faceRotationInit: PropTypes.func.isRequired
     };
 
     constructor(props) {
         super(props);
-        let faceColors = {
-            front: '',
-            back: '',
-            left: '',
-            right: '',
-            top: '',
-            bottom: ''
+        this.disableFaceRotation= false;
+        const initialFaceColors = this.initializeColors(props.translate);
+        this.state = {
+            faceColors: initialFaceColors
         };
 
         this.onTouchStart = this.onTouchStart.bind(this);
-        
-        faceColors.top = this.props.translate[1] === -cubeWidth ? '#FFFFFF' : '';
-        faceColors.bottom = this.props.translate[1] === cubeWidth ? '#FFD500' : '';
-        faceColors.left = this.props.translate[0] === -cubeWidth ? '#B90000' : '';
-        faceColors.right = this.props.translate[0] === cubeWidth ? '#FF5900' : '';
-        faceColors.front = this.props.translate[2] === cubeWidth ? '#009B48' : '';
-        faceColors.back = this.props.translate[2] === -cubeWidth ? '#0045AD' : '';
-
-        this.state = {faceColors};
-
-    }
+    
+    };
 
     
+        
+        initializeColors(translate) {
+            const colors ={
+                front: '',
+                back: '',
+                left: '',
+                right: '',
+                top: '',
+                bottom: ''
+            };
+
+        if (translate) {
+            const [x, y, z] = translate;
+            colors.front = z === cubeWidth ? '#009B48' : '';
+            colors.back = z === -cubeWidth ? '#0045AD' : '';
+            colors.left = x === -cubeWidth ? '#B90000' : '';
+            colors.right = x === cubeWidth ? '#FF5900' : '';
+            colors.top = y === -cubeWidth ? '#FFFFFF' : '';
+            colors.bottom = y === cubeWidth ? '#FFD500' : '';
+        }
+
+        return colors;
+    }
+
+    getFaceColors() {
+        // You can return colors from this.state or this.props as needed.
+        return this.state.faceColors;
+      }
 
 
     handleFaceClick = (face, eve) => {
@@ -92,14 +110,12 @@ class Cube extends Component {
         );
     }
 
-    getFaceColors = () => {
-        
-        return this.state.faceColors;
-    };
+    getFaceColors = () => this.state.faceColors;
 
     
 
     render() {
+        console.log('Rendering Cube');
         return (
             <div className="cube" style={this.cubePosition()}>
                 {faceArray.map((face) => (

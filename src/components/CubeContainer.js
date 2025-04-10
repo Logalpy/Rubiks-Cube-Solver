@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { Component, forwardRef } from 'react';
 import Cube, { cubeWidth, facePosition } from './Cube';
 import {
     calcPosition,
@@ -12,6 +12,9 @@ class CubeContainer extends Component {
 
     constructor(props) {
         super(props);
+        this.cubeRefs = Array(27).fill().map(() => React.createRef());
+        this.domRef = React.createRef();
+        
         
         this.state = {
             positions: [
@@ -45,25 +48,72 @@ class CubeContainer extends Component {
                 [cubeWidth, -cubeWidth, cubeWidth],
                 [cubeWidth, cubeWidth, cubeWidth],
             ],
+            touchStarted: false,
+            mousePoint: {x: 0, y: 0},
             angleOfRotation: Array(27).fill(0), 
-            rotationVector: Array(27).fill([1, 0, 0]),
+            rotationVector: Array(27).fill().map(() => [1,0,0])
         };
+        console.log('Initial positions:', this.state.positions);
         this.onTouchStart = this.onTouchStart.bind(this);
         this.onTouchMove = this.onTouchMove.bind(this);
         this.onTouchEnd = this.onTouchEnd.bind(this);
     }
 
+    resetToDefaultPosition = () => {
+        const initialPositions = [
+            [0, 0, 0],
+            [-cubeWidth, 0, 0],
+            [cubeWidth, 0, 0],
+            [0, -cubeWidth, 0],
+            [0, cubeWidth, 0],
+            [-cubeWidth, -cubeWidth, 0],
+            [-cubeWidth, cubeWidth, 0],
+            [cubeWidth, -cubeWidth, 0],
+            [cubeWidth, cubeWidth, 0],
+
+            [0, 0, -cubeWidth],
+            [-cubeWidth, 0, -cubeWidth],
+            [cubeWidth, 0, -cubeWidth],
+            [0, -cubeWidth, -cubeWidth],
+            [0, cubeWidth, -cubeWidth],
+            [-cubeWidth, -cubeWidth, -cubeWidth],
+            [-cubeWidth, cubeWidth, -cubeWidth],
+            [cubeWidth, -cubeWidth, -cubeWidth],
+            [cubeWidth, cubeWidth, -cubeWidth],
+
+            [0, 0, cubeWidth],
+            [-cubeWidth, 0, cubeWidth],
+            [cubeWidth, 0, cubeWidth],
+            [0, -cubeWidth, cubeWidth],
+            [0, cubeWidth, cubeWidth],
+            [-cubeWidth, -cubeWidth, cubeWidth],
+            [-cubeWidth, cubeWidth, cubeWidth],
+            [cubeWidth, -cubeWidth, cubeWidth],
+            [cubeWidth, cubeWidth, cubeWidth]
+        ];
+    
+        this.setState({
+          positions: initialPositions,
+          angleOfRotation: Array(27).fill(0),
+          rotationVector: Array(27).fill().map(() => [1, 0, 0])
+        });
+      };
+
     componentDidMount() {
-        this.elem.addEventListener('mouseup', this.onTouchEnd);
-        this.elem.addEventListener('touchend', this.onTouchEnd);
-        this.elem.addEventListener('touchcancel', this.onTouchEnd);
+        if (this.domRef.current) {
+            this.domRef.current.addEventListener('mouseup', this.onTouchEnd);
+            this.domRef.current.addEventListener('touchend', this.onTouchEnd);
+            this.domRef.current.addEventListener('touchcancel', this.onTouchEnd);
+            
+        }
+        
         this.rotateCubeSpace(120, 0);
     }
 
     componentWillUnmount() {
-        this.elem.removeEventListener('mouseup', this.onTouchEnd);
-        this.elem.removeEventListener('touchend', this.onTouchEnd);
-        this.elem.removeEventListener('touchcancel', this.onTouchEnd);
+        this.domRef.current.removeEventListener('mouseup', this.onTouchEnd);
+        this.domRef.current.removeEventListener('touchend', this.onTouchEnd);
+        this.domRef.current.removeEventListener('touchcancel', this.onTouchEnd);
     }
 
     getOrientation(index) {
@@ -75,56 +125,40 @@ class CubeContainer extends Component {
         ];
     }
 
+    
+
+    
     getCubeState = () => {
         const faceStructure = {
-            front: Array(3).fill().map(() => Array(3).fill('')),
-            back: Array(3).fill().map(() => Array(3).fill('')),
-            left: Array(3).fill().map(() => Array(3).fill('')),
-            right: Array(3).fill().map(() => Array(3).fill('')),
-            top: Array(3).fill().map(() => Array(3).fill('')),
-            bottom: Array(3).fill().map(() => Array(3).fill(''))
+          front: Array(3).fill().map(() => Array(3).fill('')),
+          back: Array(3).fill().map(() => Array(3).fill('')),
+          left: Array(3).fill().map(() => Array(3).fill('')),
+          right: Array(3).fill().map(() => Array(3).fill('')),
+          top: Array(3).fill().map(() => Array(3).fill('')),
+          bottom: Array(3).fill().map(() => Array(3).fill(''))
         };
-
-        this.cubeRefs.forEach((ref, index) => {
-            const cube = ref.current;
-            if (!cube) return;
-
-            const position = this.state.positions[index];
-            const colors = cube.getFaceColors();
-
-            // Map cube position to face coordinates
-            const x = position[0]/cubeWidth + 1;
-            const y = position[1]/cubeWidth + 1;
-            const z = position[2]/cubeWidth + 1;
-
-            // Front face (z = 1)
-            if (position[2] === cubeWidth) {
-                faceStructure.front[y][x] = colors.front;
-            }
-            // Back face (z = -1)
-            if (position[2] === -cubeWidth) {
-                faceStructure.back[y][x] = colors.back;
-            }
-            // Left face (x = -1)
-            if (position[0] === -cubeWidth) {
-                faceStructure.left[y][z] = colors.left;
-            }
-            // Right face (x = 1)
-            if (position[0] === cubeWidth) {
-                faceStructure.right[y][z] = colors.right;
-            }
-            // Top face (y = -1)
-            if (position[1] === -cubeWidth) {
-                faceStructure.top[z][x] = colors.top;
-            }
-            // Bottom face (y = 1)
-            if (position[1] === cubeWidth) {
-                faceStructure.bottom[z][x] = colors.bottom;
-            }
+      
+        this.state.positions.forEach((position, index) => {
+        const cubeRef = this.cubeRefs[index] ? this.cubeRefs[index].current : null;
+          if (!Cube) return;
+      
+          const colors = cubeRef.getFaceColors ? cubeRef.getFaceColors() : {};
+          const [x, y, z] = position.map(coord => coord / cubeWidth);
+      
+          // Direct mapping since we're in default position
+          if (z === 1) faceStructure.front[1 - y][x + 1] = colors.front;
+          if (z === -1) faceStructure.back[1 - y][1 - x] = colors.back;
+          if (x === -1) faceStructure.left[1 - y][z + 1] = colors.left;
+          if (x === 1) faceStructure.right[1 - y][1 - z] = colors.right;
+          if (y === -1) faceStructure.top[1 - z][x + 1] = colors.top;
+          if (y === 1) faceStructure.bottom[z + 1][x + 1] = colors.bottom;
         });
-
+      
         return faceStructure;
-    };
+      };
+
+      
+
 
     onTouchStart(eve) {
         eve.preventDefault();
@@ -138,7 +172,7 @@ class CubeContainer extends Component {
     }
 
     rotateCubeSpace(diffX, diffY) {
-        const arr = this.state.positions.slice();
+        const arr = this.state.positions.map(pos => [...pos]);
         const angleOfRotationArr = [];
         const rotationVectorArr = [];
 
@@ -192,22 +226,26 @@ class CubeContainer extends Component {
         return Math.min(Math.max(minSize/300, 1), 1.5);
     }
 
+    
+
     render() {
+        console.log('Cube instance rendering');
         return (
-            <div ref={elem => this.elem = elem}
+            <div ref={this.domRef}
                 
                 className="cube-container"
                 style={{ transform: `scale(${this.getScalingFactor()})` }}
                 onMouseDown={this.onTouchStart}
                 onTouchStart={this.onTouchStart}
                 onMouseMove={this.onTouchMove}
-                onTouchMove={this.onTouchMove}
             >
                 {this.state.positions.map((val, index) => (
                     <Cube
                         key={index}
+                        ref={this.cubeRefs[index]}
                         translate={this.state.positions[index]}
                         orientation={this.getOrientation(index)}
+                        onFaceClick={this.handleFaceClick}
                     />
                 ))}
                 
@@ -217,4 +255,6 @@ class CubeContainer extends Component {
     }
 }
 
-export default CubeContainer;
+export default forwardRef((props, ref) => (
+    <CubeContainer {...props} ref={ref} />
+  ));
