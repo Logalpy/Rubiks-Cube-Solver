@@ -53,8 +53,8 @@ class Cube extends Component {
             const [x, y, z] = translate;
             colors.front = z === cubeWidth ? '#009B48' : '';
             colors.back = z === -cubeWidth ? '#0045AD' : '';
-            colors.left = x === -cubeWidth ? '#B90000' : '';
-            colors.right = x === cubeWidth ? '#FF5900' : '';
+            colors.left = x === -cubeWidth ? '#FF5900' : '';
+            colors.right = x === cubeWidth ? '#B90000' : '';
             colors.top = y === -cubeWidth ? '#FFFFFF' : '';
             colors.bottom = y === cubeWidth ? '#FFD500' : '';
         }
@@ -62,8 +62,8 @@ class Cube extends Component {
         return colors;
     }
 
+    
     getFaceColors() {
-        // You can return colors from this.state or this.props as needed.
         return this.state.faceColors;
       }
 

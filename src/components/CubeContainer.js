@@ -140,23 +140,41 @@ class CubeContainer extends Component {
       
         this.state.positions.forEach((position, index) => {
         const cubeRef = this.cubeRefs[index] ? this.cubeRefs[index].current : null;
-          if (!Cube) return;
+          if (!cubeRef) return;
       
           const colors = cubeRef.getFaceColors ? cubeRef.getFaceColors() : {};
           const [x, y, z] = position.map(coord => coord / cubeWidth);
       
-          // Direct mapping since we're in default position
-          if (z === 1) faceStructure.front[1 - y][x + 1] = colors.front;
-          if (z === -1) faceStructure.back[1 - y][1 - x] = colors.back;
-          if (x === -1) faceStructure.left[1 - y][z + 1] = colors.left;
-          if (x === 1) faceStructure.right[1 - y][1 - z] = colors.right;
-          if (y === -1) faceStructure.top[1 - z][x + 1] = colors.top;
-          if (y === 1) faceStructure.bottom[z + 1][x + 1] = colors.bottom;
+          // Direct mapping since we adjust to original position
+          if (z === 1) faceStructure.front[y + 1][x + 1] = colors.front;
+          if (z === -1) faceStructure.back[1 - y][x + 1] = colors.back;
+          if (x === -1) faceStructure.left[z + 1][1 - y] = colors.left;
+          if (x === 1) faceStructure.right[z + 1][y + 1] = colors.right;
+          if (y === -1) faceStructure.top[z + 1][x + 1] = colors.top;
+          if (y === 1) faceStructure.bottom[1- z][x + 1] = colors.bottom;
         });
-      
-        return faceStructure;
+        const BackEndArray = this.replaceHexWithColorNames(faceStructure);
+        return BackEndArray;
       };
 
+
+      replaceHexWithColorNames = (faceStructure) => {
+        const colorMap = {
+          '#B90000': 'R',
+          '#0045AD': 'B',
+          '#FF5900': 'O',
+          '#FFFFFF': 'W',
+          '#FFD500': 'Y',
+          '#009B48': 'G'
+        };
+        const convertedStructure = {};
+
+        for (const [faceName, faceGrid] of Object.entries(faceStructure)) {
+            convertedStructure[faceName] = faceGrid.map(row =>
+                row.map(cell => colorMap[cell] || cell));
+        }
+        return convertedStructure;
+    };
       
 
 

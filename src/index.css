@@ -90,17 +90,17 @@ body {
 }
 
 .controls{
-  height: 60px;
-  width: 115px;
+  height: 80px;
+  width: 250px;
   position:relative;
   display: flex;
-  bottom: 80px;
-  font-size: 45px;
+  bottom: 100px;
+  font-size: 50px;
   text-align: center;
   background-color:rgb(143, 133, 133);
   color:white;
   border-color:rgb(143, 133, 133);
-  display: inline-flex;
+  display: inline-block;
 }
 
 
@@ -108,7 +108,7 @@ body {
  .solver {
   position: absolute;
   right: 100px;
-  bottom: 100px;
+  bottom: 130px;
   appearance: none;
   background-color: #fff;
   border-radius: 24px;
@@ -201,3 +201,34 @@ body {
   top: 30px;
 }
 
+.solution-box {
+  position:relative;
+  justify-content:center;
+  display:flex;
+  margin: auto;
+  max-width: 600px;
+  bottom: 350px;
+}
+
+.solution-box textarea {
+  width: 100%;
+  padding: 10px;
+  border: 2px solid #2196f3;
+  border-radius: 4px;
+  font-family: monospace;
+  resize: vertical;
+}
+
+.copy-btn {
+  margin-top: 10px;
+  padding: 8px 16px;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.copy-btn:hover {
+  background: #45a049;
+}
