@@ -528,79 +528,44 @@ class CubeSolver:
 
 
     def cross(self):
-        print("Starting cross solve...")
-        attempts = 0
-        max_attempts = 30
+        for i in range(4):
+            self.putCrossEdge()
+            assert "Y" in [self.cube[4][0][1], self.cube[1][2][1]]
+            if self.cube[1][2][1] == "Y":
+                self.m("Fi R U Ri F2")   #orient if necessary
+            self.m("Di")
 
-        def is_edge_solved(edge_pos, center_pos):
-            return (self.cube[edge_pos[0]][edge_pos[1]][edge_pos[2]] == self.cube[4][1][1] and 
-                    self.cube[edge_pos[3]][edge_pos[4]][edge_pos[5]] == self.cube[center_pos[0]][center_pos[1]][center_pos[2]])
-
-        while not self.isCrossSolved() and attempts < max_attempts:
-            attempts += 1
-            print(f"Cross attempt {attempts}")
-            
-            # Check each edge piece
-            edges = [
-                # [edge_piece_coords, center_coords]
-                [[4,0,1, 1,2,1], [1,1,1]],  # Front edge
-                [[4,1,2, 2,2,1], [2,1,1]],  # Right edge
-                [[4,2,1, 5,2,1], [5,1,1]],  # Back edge
-                [[4,1,0, 3,2,1], [3,1,1]]   # Left edge
-            ]
-            
-            unsolved_edges = [i for i, edge in enumerate(edges) if not is_edge_solved(edge[0], edge[1])]
-            
-            if not unsolved_edges:
-                print("Cross solved!")
-                return
-                
-            # Try to solve one unsolved edge
-            for edge_idx in unsolved_edges:
-                # Check if the edge piece contains yellow
-                yellow_sticker = self.cube[4][1][1]  # Yellow center
-                
-                # Look for the edge piece in the top layer
-                found = False
-                for i in range(4):
-                    if self.cube[0][2][1] == yellow_sticker:
-                        # Found yellow sticker on top - align and insert
-                        target_center = self.cube[edges[edge_idx][1][0]][edges[edge_idx][1][1]][edges[edge_idx][1][2]]
-                        if self.cube[1][0][1] == target_center:
-                            self.m("F2")
-                            found = True
-                            break
-                    self.m("U")
-                
-                if found:
-                    continue
-                    
-                # Check middle layer edges
-                for i in range(4):
-                    if self.cube[1][1][2] == yellow_sticker:
-                        self.m("R U F'")
-                        found = True
-                        break
-                    self.m("Y")
-                
-                if found:
-                    continue
-                    
-                # If edge is in bottom layer but wrong orientation
-                if self.cube[4][0][1] == yellow_sticker:
-                    self.m("F2")
-                    found = True
-                
-                if not found:
-                    # Make a setup move if no good moves found
-                    self.m("F")
-            
-            self.simplify_moves()
-        
-        if attempts >= max_attempts:
-            print("Cross solving timed out!")
-        else:
-            print("Cross solved successfully!")
+        #permute to correct face: move down face until 2 are lined up,
+        #then swap the other 2 if they need to be swapped
+        condition = False
+        while not condition:
+            fSame = self.cube[1][1][1] == self.cube[1][2][1]
+            rSame = self.cube[2][1][1] == self.cube[2][1][2]
+            bSame = self.cube[5][1][1] == self.cube[5][0][1]
+            lSame = self.cube[3][1][1] == self.cube[3][1][0]
+            condition = (fSame, rSame, bSame, lSame).count(True) >= 2
+            if not condition:
+                self.m("D")
+        if (fSame, rSame, bSame, lSame).count(True) == 4:
+            return
+        assert (fSame, rSame, bSame, lSame).count(True) == 2
+        if not fSame and not bSame:
+            self.m("F2 U2 B2 U2 F2") #swap front-back
+        elif not rSame and not lSame:
+            self.m("R2 U2 L2 U2 R2") #swap right-left
+        elif not fSame and not rSame:
+            self.m("F2 Ui R2 U F2") #swap front-right
+        elif not rSame and not bSame:
+            self.m("R2 Ui B2 U R2") #swap right-back
+        elif not bSame and not lSame:
+            self.m("B2 Ui L2 U B2") #swap back-left
+        elif not lSame and not fSame:
+            self.m("L2 Ui F2 U L2") #swap left-front
+        fSame = self.cube[1][1][1] == self.cube[1][2][1]
+        rSame = self.cube[2][1][1] == self.cube[2][1][2]
+        bSame = self.cube[5][1][1] == self.cube[5][0][1]
+        lSame = self.cube[3][1][1] == self.cube[3][1][0]
+        assert all([fSame, rSame, bSame, lSame])
 
 
     # This is uses all the f2l algs to solve all the cases possible
@@ -939,6 +904,7 @@ class CubeSolver:
             raise Exception("f2lEdgeCheck() Exception")
 
 
+
     # This is for the case where the Edge is inserted, but the corner is not
     def f2lEdgeNoCorner(self):
         topEdgeTop = self.cube[0][2][1]
@@ -980,64 +946,24 @@ class CubeSolver:
 
 
     # This is the case for if the corner is inserted, but the edge is not
-    def f2lCornerNoEdge(self):
-        topEdgeTop = self.cube[0][2][1]
-        topEdgeFront = self.cube[1][0][1]
-        rmid = self.cube[2][1][1]
-        bmid = self.cube[5][1][1]
-        lmid = self.cube[3][1][1]
-        fmid = self.cube[1][1][1]
-        # This is for comparing the front edge to other various edges for advanced algs/lookahead
-        BREdge = (topEdgeTop == rmid or topEdgeTop == bmid) and (topEdgeFront == rmid or topEdgeFront == bmid)
-        BLEdge = (topEdgeTop == lmid or topEdgeTop == bmid) and (topEdgeFront == lmid or topEdgeFront == bmid)
-        FLEdge = (topEdgeTop == fmid or topEdgeTop == lmid) and (topEdgeFront == fmid or topEdgeFront == lmid)
-        if self.f2lEdgeOnTop():
-            while True:
-                self.solveFrontSlot()
-                if self.f2lCorrect():
-                    break
-                self.m("U")
-        else:
-            if self.f2lEdgeCheck() == "BR":
-                if BREdge:
-                    self.m("Ri Ui R U2")
-                else:
-                    self.m("Ri U R U")
-            elif self.f2lEdgeCheck() == "BL":
-                if BLEdge:
-                    self.m("L U Li U")
-                else:
-                    self.m("L Ui Li U2")
-            elif self.f2lEdgeCheck() == "FL":
-                if FLEdge:
-                    self.m("Li U L Ui")
-                else:
-                    self.m("Li Ui L")
-        self.solveFrontSlot()
-
-        if not self.f2lCorrect():
-            raise Exception("Exception found in f2lCornerNoEdge()")
-
-
-    # this is the case for if the corner is on top, and the edge is not. Neither are inserted properly. Edge must be in another slot.
     def f2lCornerTopNoEdge(self):
-        topEdgeTop = self.cube[0][2][1]
-        topEdgeFront = self.cube[1][0][1]
-        rmid = self.cube[2][1][1]
-        bmid = self.cube[5][1][1]
-        lmid = self.cube[3][1][1]
-        fmid = self.cube[1][1][1]
-        # This is for comparing the front edge to other various edges for advanced algs/lookahead
-        BREdge = (topEdgeTop == rmid or topEdgeTop == bmid) and (topEdgeFront == rmid or topEdgeFront == bmid)
-        BLEdge = (topEdgeTop == lmid or topEdgeTop == bmid) and (topEdgeFront == lmid or topEdgeFront == bmid)
-        FLEdge = (topEdgeTop == fmid or topEdgeTop == lmid) and (topEdgeFront == fmid or topEdgeFront == lmid)
+        self.topEdgeTop = self.cube[0][2][1]
+        self.topEdgeFront = self.cube[1][0][1]
+        self.rmid = self.cube[2][1][1]
+        self.bmid = self.cube[5][1][1]
+        self.lmid = self.cube[3][1][1]
+        self.fmid = self.cube[1][1][1]
+        #This is for comparing the front edge to other various edges for advanced algs/lookahead
+        BREdge = (self.topEdgeTop == self.rmid or self.topEdgeTop == self.bmid) and (self.topEdgeFront == self.rmid or self.topEdgeFront == self.bmid)
+        BLEdge = (self.topEdgeTop == self.lmid or self.topEdgeTop == self.bmid) and (self.topEdgeFront == self.lmid or self.topEdgeFront == self.bmid)
+        FLEdge = (self.topEdgeTop == self.fmid or self.topEdgeTop == self.lmid) and (self.topEdgeFront == self.fmid or self.topEdgeFront == self.lmid)
 
-        # Turn the top until the corner on the U face is in the proper position
+        #Turn the top until the corner on the U face is in the proper position
         while True:
             if self.f2lFRCor():
                 break
             self.m("U")
-        # We will be checking additional edges to choose a more fitting alg for the sake of looking ahead
+        #We will be checking additional edges to choose a more fitting alg for the sake of looking ahead
         if self.f2lEdgeCheck() == "BR":
             if BREdge:
                 self.m("Ri Ui R")
@@ -1057,6 +983,46 @@ class CubeSolver:
 
         if not self.f2lCorrect():
             raise Exception("Exception found in f2lCornerTopNoEdge()")
+
+
+    # this is the case for if the corner is on top, and the edge is not. Neither are inserted properly. Edge must be in another slot.
+    def f2lCornerTopNoEdge(self):
+        self.BackEdgeTop = self.cube[0][0][1]
+        self.BackEdgeBack = self.cube[5][2][1]
+        self.rmid = self.cube[2][1][1]
+        self.bmid = self.cube[5][1][1]
+        self.lmid = self.cube[3][1][1]
+        self.fmid = self.cube[1][1][1]
+        #This is for comparing the back edge to other various edges for advanced algs/lookahead
+        BREdge = (self.BackEdgeTop == self.rmid or self.BackEdgeTop == self.bmid) and (self.BackEdgeBack == self.rmid or self.BackEdgeBack == self.bmid)
+        BLEdge = (self.BackEdgeTop == self.lmid or self.BackEdgeTop == self.bmid) and (self.BackEdgeBack == self.lmid or self.BackEdgeBack == self.bmid)
+        FLEdge = (self.BackEdgeTop == self.fmid or self.BackEdgeTop == self.lmid) and (self.BackEdgeBack == self.fmid or self.BackEdgeBack == self.lmid)
+
+        # Turn the top until the corner on the U face is in the proper position
+        if self.f2lCornerCheck() == "BR":
+            if BREdge:
+                self.m("Ri U R U")
+            else:
+                self.m("Ui Ri U R U")
+        elif self.f2lCornerCheck() == "BL":
+            if BLEdge:
+                self.m("L Ui Li U2")
+            else:
+                self.m("U2 L U2 Li")
+        elif self.f2lCornerCheck() == "FL":
+            if FLEdge:
+                self.m("Li Ui L")
+            else:
+                self.m("U Li Ui L")
+        self.solveFrontSlot()
+
+        if self.f2lCorrect():
+            return
+        else:
+            self.f2lCornerTopNoEdge()
+
+        if not self.f2lCorrect():
+            raise Exception("Exception found in f2lNoEdgeOrCorner()")
 
 
     # This is the case for if the edge is on top, and the corner is not. Neither are inserted properly. Corner must be in another slot.
@@ -1101,49 +1067,6 @@ class CubeSolver:
         if not self.f2lCorrect():
             raise Exception("Exception found in f2lEdgeTopNoCorner()")
 
-
-    # This is the case for if the edge or corner are not on top, and not inserted properly. They must both be in other slots.
-    def f2lNoEdgeOrCorner(self):
-        # The strategy here is to first find the corner and get it out. I will place it in the FR position where it belongs
-        # I will then check if I have a case, and if we are all solved.
-        # If I don't have it solved at this point, I will have to follow what happens in f2lCornerTopNoEdge()
-
-        BackEdgeTop = self.cube[0][0][1]
-        BackEdgeBack = self.cube[5][2][1]
-        rmid = self.cube[2][1][1]
-        bmid = self.cube[5][1][1]
-        lmid = self.cube[3][1][1]
-        fmid = self.cube[1][1][1]
-        # This is for comparing the back edge to other various edges for advanced algs/lookahead
-        BREdge = (BackEdgeTop == rmid or BackEdgeTop == bmid) and (BackEdgeBack == rmid or BackEdgeBack == bmid)
-        BLEdge = (BackEdgeTop == lmid or BackEdgeTop == bmid) and (BackEdgeBack == lmid or BackEdgeBack == bmid)
-        FLEdge = (BackEdgeTop == fmid or BackEdgeTop == lmid) and (BackEdgeBack == fmid or BackEdgeBack == lmid)
-
-        # We will be checking additional edges to choose a more fitting alg for the sake of looking ahead
-        if self.f2lCornerCheck() == "BR":
-            if BREdge:
-                self.m("Ri U R U")
-            else:
-                self.m("Ui Ri U R U")
-        elif self.f2lCornerCheck() == "BL":
-            if BLEdge:
-                self.m("L Ui Li U2")
-            else:
-                self.m("U2 L U2 Li")
-        elif self.f2lCornerCheck() == "FL":
-            if FLEdge:
-                self.m("Li Ui L")
-            else:
-                self.m("U Li Ui L")
-        self.solveFrontSlot()
-
-        if self.f2lCorrect():
-            return
-        else:
-            self.f2lCornerTopNoEdge()
-
-        if not self.f2lCorrect():
-            raise Exception("Exception found in f2lNoEdgeOrCorner()")
 
 
     # Will return true if the f2l is completed

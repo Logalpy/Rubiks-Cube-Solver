@@ -1,5 +1,5 @@
 import React, { Component, useRef, useState, useEffect } from 'react';
-import CubeContainer from './CubeContainer';
+import CubeContainer from './RCube';
 import Button from './Button';
 
 function App() {
@@ -92,7 +92,7 @@ function App() {
         <textarea
           readOnly
           value={solutionText}
-          placeholder="Click Solve! to generate solutions"
+          placeholder="Click and hold to rotate the cube, click each cubie face to change its color. When finished, click Solve! to generate solutions"
           rows="4"
         />
         <button 

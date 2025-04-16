@@ -1,14 +1,13 @@
 import React, { Component, forwardRef } from 'react';
-import Cube, { cubeWidth, facePosition } from './Cube';
+import Cube, { cubeWidth } from './Cubies';
 import {
     calcPosition,
     calculateResultantAngle,
-    getCubePositionDiffrence,
     getTouchPositions
 } from '../utilities/utilities';
 
 
-class CubeContainer extends Component {
+class RCube extends Component {
 
     constructor(props) {
         super(props);
@@ -274,5 +273,5 @@ class CubeContainer extends Component {
 }
 
 export default forwardRef((props, ref) => (
-    <CubeContainer {...props} ref={ref} />
+    <RCube {...props} ref={ref} />
   ));

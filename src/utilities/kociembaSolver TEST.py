@@ -1,9 +1,9 @@
 import kociemba
-from flask import Flask, request, jsonify, make_response
+from flask import Flask, reqpuest, jsonify, make_response
 from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app, resources = {r"/solve2": {"origins": "http://localhost:3000"}})
+CORS(app, origins=["http://localhost:3000"])
 
 
 def create_cube(face_name, face_data):

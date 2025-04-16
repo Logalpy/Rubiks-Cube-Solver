@@ -15,7 +15,7 @@ export const facePosition = {
 const colorOrder = ['#B90000', '#0045AD', '#FF5900', '#FFFFFF', '#FFD500', '#009B48'];
 
 
-class Cube extends Component {
+class Cubies extends Component {
 
     static propTypes = {
         translate: PropTypes.array.isRequired,
@@ -135,4 +135,4 @@ class Cube extends Component {
     }
 }
 
-export default Cube;
+export default Cubies;
