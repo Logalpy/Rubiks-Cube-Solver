@@ -1,30 +1,29 @@
+import unittest
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from cube import RubiksCube
 from Thistlethwaites import ThistlethwaiteSolver
 
-
-
-cube = RubiksCube()
-cube.load_from_cube_data({
-    'top': [['R', 'R', 'O'], ['W', 'W', 'O'], ['O', 'O', 'Y']],  # Up/white
-    'front': [['W', 'W', 'B'], ['R', 'G', 'W'], ['B', 'O', 'Y']],  # front/green
-    'bottom': [['O', 'B', 'R'], ['G', 'Y', 'O'], ['R', 'Y', 'B']],  # Down/yellow
-    'left': [['W', 'Y', 'W'], ['W', 'O', 'R'], ['Y', 'Y', 'G']],  # Left/orange
-    'right': [['Y', 'B', 'W'], ['Y', 'R', 'G'], ['R', 'B', 'G']],  # Right/red
-    'back': [['G', 'G', 'O'], ['B', 'B', 'R'], ['B', 'G', 'G']]   # Back/blue
+# Create cube data dictionary
+cube_data = {
+    'top': [['B', 'W', 'W'], ['B', 'W', 'W'], ['B', 'R', 'W']],
+    'front': [['W', 'G', 'O'], ['W', 'G', 'Y'], ['O', 'O', 'W']],
+    'bottom': [['G', 'G', 'G'], ['Y', 'Y', 'Y'], ['Y', 'G', 'B']],
+    'left': [['O', 'O', 'O'], ['O', 'O', 'O'], ['R', 'B', 'Y']],
+    'right': [['G', 'R', 'R'], ['R', 'R', 'R'], ['R', 'G', 'Y']],
+    'back': [['B', 'B', 'Y'], ['B', 'B', 'Y'], ['R', 'W', 'G']]
 }
-)
 
-print(cube)
-solver = ThistlethwaiteSolver(cube)
-solution1 = solver.solve_phase(0)
+# Create a RubiksCube for display purposes
+# Create a CFOP solver with the cube_data
+solver = ThistlethwaiteSolver(cube_data)
+solution = solver.solve_phase(0)
 solution2 = solver.solve_phase(1)
-solution3 = solver.solve_phase(2)
-solution4 = solver.solve_phase(3)
-solution = solution1 + solution2 + solution3 + solution4
-print(f"Solution moves1: {solution1}")
-print(f"Solution moves2: {solution2}")
-print(f"Solution moves3: {solution3}")
-print(f"Solution moves4: {solution4}")
+soltuion3 = solver.solve_phase(2)
+print("Solved cube:")
+print(solver.cube)
+print("All moves:", solution + solution2 + soltuion3)
+##print("Per‑phase moves:", solver.step_moves_list)
+print(solver.get_phase0_state())
+print(solver.get_phase1_state())
+print(solver.get_phase2_state())

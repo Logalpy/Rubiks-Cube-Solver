@@ -1,6 +1,7 @@
 from tkinter import *
 from flask import Flask, request, jsonify, make_response
 from flask_cors import CORS
+from .cube import RubiksCube
 
 app = Flask(__name__)
 CORS(app, resources={
@@ -10,36 +11,13 @@ CORS(app, resources={
 
 class CubeSolver:
     def __init__(self, cube_data):
-        self.cube = self.make_cube(cube_data)
+        self.cube = RubiksCube()
+        self.cube.load_from_cube_data(cube_data)
         self.moves_list = []
         self.last_scramble = []
         self.f2l_list = []
         self.step_moves_list = [0, 0, 0, 0]
         self.solution_length = 0
-
-
-    # creates a 3d list representing a solved cube
-    def make_cube(self, cube_data):
-        self.step_moves_list = [0, 0, 0, 0]
-        self.f2l_list = []
-        self.moves_list = []
-        return [[[cell.upper() for cell in row] for row in cube_data['top']],  # Up/white
-
-                [[cell.upper() for cell in row] for row in cube_data['front']],  # front/green
-
-                [[cell.upper() for cell in row] for row in cube_data['right']],  # right/red
-
-                [[cell.upper() for cell in row] for row in cube_data['left']],  # left/orange
-
-                [[cell.upper() for cell in row] for row in cube_data['bottom']],  # down/yellow
-
-                [[cell.upper() for cell in row] for row in cube_data['back']]]  # back/blue
-
-
-
-
-
-
 
     def get_moves(self):
         self.simplify_moves()
@@ -49,14 +27,9 @@ class CubeSolver:
         s = str.replace(s, "i", "'")[:-1]
         return s
 
-
-
-
     def all_same(items):
         return all(x == items[0] for x in items)
 
-
-    # translates moves
     def yTransform(self, move):
         if move[0] in ["U", "D"]:
             return move
@@ -70,8 +43,6 @@ class CubeSolver:
             return "F" + move[1:]
         raise Exception("Invalid move to yTransform: " + move)
 
-
-    # remove redundancies
     def simplify_moves(self):
         new_list = []
         prev_move = ""
@@ -153,8 +124,6 @@ class CubeSolver:
         self.solution_length = len(new_list)
         self.moves_list = new_list
 
-
-    # gets cube in position for U
     def setup(self, face):
         face = str.lower(face)
         if face == "f":
@@ -170,8 +139,6 @@ class CubeSolver:
         else:
             raise Exception("Invalid setup; face: " + face)
 
-
-    # reverses the setup
     def undo(self, face):
         face = str.lower(face)
         if face == "f":
@@ -187,8 +154,6 @@ class CubeSolver:
         else:
             raise Exception("Invalid undo; face: " + face)
 
-
-    # Tokenizes a string of moves
     def m(self, s):
         s = str.replace(s, "'", "i")
         k = s.split(' ')
@@ -197,322 +162,60 @@ class CubeSolver:
             self.moves_list.append(word)
             self.move(word)
 
-
-    # limit moves to performing U moves, by setting up, doing the move, and undoing the setup
     def move(self, mv):
-        mv = str.lower(mv)
-        if mv == "u":
-            self.U()
-        elif mv == "u2":
-            self.move("U");
-            self.move("U");
-        elif mv == "ui":
-            self.move("U");
-            self.move("U");
-            self.move("U");
-        elif mv == "f":
-            self.setup("F");
-            self.U();
-            self.undo("F");
-        elif mv == "f2":
-            self.move("F");
-            self.move("F");
-        elif mv == "fi":
-            self.move("F");
-            self.move("F");
-            self.move("F");
-        elif mv == "r":
-            self.setup("R");
-            self.U();
-            self.undo("R");
-        elif mv == "r2":
-            self.move("R");
-            self.move("R");
-        elif mv == "ri":
-            self.move("R");
-            self.move("R");
-            self.move("R");
-        elif mv == "l":
-            self.setup("L");
-            self.U();
-            self.undo("L");
-        elif mv == "l2":
-            self.move("L");
-            self.move("L");
-        elif mv == "li":
-            self.move("L");
-            self.move("L");
-            self.move("L");
-        elif mv == "b":
-            self.setup("B");
-            self.U();
-            self.undo("B");
-        elif mv == "b2":
-            self.move("B");
-            self.move("B");
-        elif mv == "bi":
-            self.move("B");
-            self.move("B");
-            self.move("B");
-        elif mv == "d":
-            self.setup("D");
-            self.U();
-            self.undo("D");
-        elif mv == "d2":
-            self.move("D");
-            self.move("D");
-        elif mv == "di":
-            self.move("D");
-            self.move("D");
-            self.move("D");
-        elif mv == "x":
-            self.rotate("X")
-        elif mv == "x2":
-            self.move("X");
-            self.move("X");
-        elif mv == "xi":
-            self.move("X");
-            self.move("X");
-            self.move("X");
-        elif mv == "y":
-            self.rotate("Y")
-        elif mv == "y2":
-            self.move("Y");
-            self.move("Y");
-        elif mv == "yi":
-            self.move("Y");
-            self.move("Y");
-            self.move("Y");
-        elif mv == "z":
-            self.rotate("Z")
-        elif mv == "z2":
-            self.move("Z");
-            self.move("Z");
-        elif mv == "zi":
-            self.move("Z");
-            self.move("Z");
-            self.move("Z");
-        elif mv == "uw":
-            self.move("D");
-            self.move("Y");
-        elif mv == "uw2":
-            self.move("UW");
-            self.move("UW");
-        elif mv == "uwi":
-            self.move("UW");
-            self.move("UW");
-            self.move("UW");
-        elif mv == "m":
-            self.move("Li");
-            self.move("R");
-            self.move("Xi");
-        elif mv == "mi":
-            self.move("M");
-            self.move("M");
-            self.move("M");
-        elif mv == "m2":
-            self.move("M");
-            self.move("M");
-        elif mv == "rw":
-            self.move("L");
-            self.move("X");
-        elif mv == "rwi":
-            self.move("RW");
-            self.move("RW");
-            self.move("RW");
-        elif mv == "rw2":
-            self.move("RW");
-            self.move("RW");
-        elif mv == "fw":
-            self.move("Bi");
-            self.move("Z");
-        elif mv == "fwi":
-            self.move("FW");
-            self.move("FW");
-            self.move("FW");
-        elif mv == "fw2":
-            self.move("FW");
-            self.move("FW");
-        elif mv == "lw":
-            self.move("R");
-            self.move("Xi");
-        elif mv == "lwi":
-            self.move("LW");
-            self.move("LW");
-            self.move("LW");
-        elif mv == "lw2":
-            self.move("LW");
-            self.move("LW");
-        elif mv == "bw":
-            self.move("F");
-            self.move("Zi");
-        elif mv == "bwi":
-            self.move("BW");
-            self.move("BW");
-            self.move("BW");
-        elif mv == "bw2":
-            self.move("BW");
-            self.move("BW");
-        elif mv == "dw":
-            self.move("U");
-            self.move("Yi");
-        elif mv == "dwi":
-            self.move("DW");
-            self.move("DW");
-            self.move("DW");
-        elif mv == "dw2":
-            self.move("DW");
-            self.move("DW");
-        else:
-            raise Exception("Invalid Move: " + str(mv))
+        mv = str.replace(mv, "'", "i")  # Convert notation to match RubiksCube class
+        self.cube.move(mv)
 
-
-    # rotates the entire cube along a particular axis
     def rotate(self, axis):
-        axis = str.lower(axis)
-        if axis == 'x':  # R
-            temp = self.cube[0]
-            self.cube[0] = self.cube[1]
-            self.cube[1] = self.cube[4]
-            self.cube[4] = self.cube[5]
-            self.cube[5] = temp
-            self.rotate_face_counterclockwise("L")
-            self.rotate_face_clockwise("R")
-        elif axis == 'y':  # U
-            temp = self.cube[1]
-            self.cube[1] = self.cube[2]
-            self.cube[2] = self.cube[5]
-            self.cube[5] = self.cube[3]
-            self.cube[3] = temp
-            self.rotate_face_clockwise("L")
-            self.rotate_face_clockwise("F")
-            self.rotate_face_clockwise("R")
-            self.rotate_face_clockwise("B")
-            self.rotate_face_clockwise("U")
-            self.rotate_face_counterclockwise("D")
-        elif axis == 'z':  # F
-            temp = self.cube[0]
-            self.cube[0] = self.cube[3]
-            self.cube[3] = self.cube[4]
-            self.cube[4] = self.cube[2]
-            self.cube[2] = temp
-            self.rotate_face_clockwise("L");
-            self.rotate_face_clockwise("L");
-            self.rotate_face_clockwise("D");
-            self.rotate_face_clockwise("D");
-            self.rotate_face_clockwise("F")
-            self.rotate_face_counterclockwise("B")
-        else:
-            raise Exception("Invalid rotation: " + axis)
+        # Convert X, Y, Z rotations into the equivalent face moves
+        axis = str.upper(axis)
+        if axis == 'X':
+            # X rotation is equivalent to R rotation of entire cube
+            self.move("L'")
+            self.move("M'")
+            self.move("R")
+        elif axis == 'Y':
+            # Y rotation is equivalent to U rotation of entire cube
+            self.move("U")
+            self.move("E'")
+            self.move("D'")
+        elif axis == 'Z':
+            # Z rotation is equivalent to F rotation of entire cube
+            self.move("F")
+            self.move("S")
+            self.move("B'")
 
-
-    # performs a U move
     def U(self):
-        # rotate U face
-        temp = self.cube[0][0][0]
-        self.cube[0][0][0] = self.cube[0][2][0]
-        self.cube[0][2][0] = self.cube[0][2][2]
-        self.cube[0][2][2] = self.cube[0][0][2]
-        self.cube[0][0][2] = temp
-        temp = self.cube[0][0][1]
-        self.cube[0][0][1] = self.cube[0][1][0]
-        self.cube[0][1][0] = self.cube[0][2][1]
-        self.cube[0][2][1] = self.cube[0][1][2]
-        self.cube[0][1][2] = temp
+        self.move("U")
 
-        # rotate others
-        temp = self.cube[5][2][0]
-        self.cube[5][2][0] = self.cube[3][2][2]
-        self.cube[3][2][2] = self.cube[1][0][2]
-        self.cube[1][0][2] = self.cube[2][0][0]
-        self.cube[2][0][0] = temp
-        temp = self.cube[5][2][1]
-        self.cube[5][2][1] = self.cube[3][1][2]
-        self.cube[3][1][2] = self.cube[1][0][1]
-        self.cube[1][0][1] = self.cube[2][1][0]
-        self.cube[2][1][0] = temp
-        temp = self.cube[5][2][2]
-        self.cube[5][2][2] = self.cube[3][0][2]
-        self.cube[3][0][2] = self.cube[1][0][0]
-        self.cube[1][0][0] = self.cube[2][2][0]
-        self.cube[2][2][0] = temp
-
-
-    # Rotate face counter-clockwise
-    def rotate_face_counterclockwise(self,face):
-        self.rotate_face_clockwise(face)
-        self.rotate_face_clockwise(face)
-        self.rotate_face_clockwise(face)
-
-
-    # Rotate face clockwise
     def rotate_face_clockwise(self, face):
-        f_id = -1
-        face = str.lower(face)
-        if face == "u":
-            f_id = 0
-        elif face == "f":
-            f_id = 1
-        elif face == "r":
-            f_id = 2
-        elif face == "l":
-            f_id = 3
-        elif face == "d":
-            f_id = 4
-        elif face == "b":
-            f_id = 5
-        else:
-            raise Exception("Invalid face: " + face)
-        temp = self.cube[f_id][0][0]
-        self.cube[f_id][0][0] = self.cube[f_id][2][0]
-        self.cube[f_id][2][0] = self.cube[f_id][2][2]
-        self.cube[f_id][2][2] = self.cube[f_id][0][2]
-        self.cube[f_id][0][2] = temp
-        temp = self.cube[f_id][0][1]
-        self.cube[f_id][0][1] = self.cube[f_id][1][0]
-        self.cube[f_id][1][0] = self.cube[f_id][2][1]
-        self.cube[f_id][2][1] = self.cube[f_id][1][2]
-        self.cube[f_id][1][2] = temp
+        face = face.upper()  # RubiksCube uses uppercase face letters
+        self.cube.rotate_face_clockwise(face)
 
+    def rotate_face_counterclockwise(self, face):
+        face = face.upper()  # RubiksCube uses uppercase face letters
+        self.cube.rotate_face_counterclockwise(face)
 
-    # part of the OLL step
     def topCross(self):
-       
-        if self.cube[0][0][1] == self.cube[0][1][0] == self.cube[0][1][2] == self.cube[0][2][1]:
-         
+        if self.cube.is_top_cross_solved():
             return
-    
         else:
-            while self.cube[0][0][1] != "W" or self.cube[0][1][0] != "W" or self.cube[0][1][2] != "W" or self.cube[0][2][1] != "W":
-                if self.cube[0][1][0] == self.cube[0][1][2]:
-                   
+            while not self.cube.is_top_cross_solved():
+                if self.cube.is_top_cross_line():
                     self.m("F R U Ri Ui Fi")
-                    break  
-                elif self.cube[0][0][1] == self.cube[0][2][1]:
-                    
+                    break
+                elif self.cube.is_top_cross_L():
                     self.m("U F R U Ri Ui Fi")
                     break
-                elif self.cube[0][0][1] != "W" and self.cube[0][1][0] != "W" and self.cube[0][1][2] != "W" and self.cube[0][2][1] != "W":
-                   
+                elif self.cube.is_top_cross_dot():
                     self.m("F U R Ui Ri Fi U F R U Ri Ui Fi")
                     break
-                elif self.cube[0][1][2] == self.cube[0][2][1] or self.cube[0][0][1] == self.cube[0][1][0]:
-                    
-                    self.m("F R U Ri Ui Fi")
                 else:
-                    
                     self.m("U")
 
-
     def isTopSolved(self):
-        if self.cube[0][0][0] == self.cube[0][0][1] == self.cube[0][0][2] == self.cube[0][1][0] == self.cube[0][1][1] == self.cube[0][1][2] == self.cube[0][2][0] == self.cube[0][2][1] == \
-                self.cube[0][2][2]:
-            return True
-        else:
-            return False
+        return self.cube.is_top_solved()
 
-
-    # puts an edge in its right spot
     def putCrossEdge(self):
         for i in range(3):
             if i == 1:
@@ -521,28 +224,25 @@ class CubeSolver:
                 self.m("L Ui Li F2")  # bring out back-left edge
             for j in range(4):
                 for k in range(4):
-                    if "Y" in [self.cube[4][0][1], self.cube[1][2][1]]:
+                    if "Y" in [self.cube.get_bottom_color(), self.cube.get_front_color()]:
                         return
                     self.m("F")
                 self.m("U")
 
-
     def cross(self):
         for i in range(4):
             self.putCrossEdge()
-            assert "Y" in [self.cube[4][0][1], self.cube[1][2][1]]
-            if self.cube[1][2][1] == "Y":
+            assert "Y" in [self.cube.get_bottom_color(), self.cube.get_front_color()]
+            if self.cube.get_front_color() == "Y":
                 self.m("Fi R U Ri F2")   #orient if necessary
             self.m("Di")
 
-        #permute to correct face: move down face until 2 are lined up,
-        #then swap the other 2 if they need to be swapped
         condition = False
         while not condition:
-            fSame = self.cube[1][1][1] == self.cube[1][2][1]
-            rSame = self.cube[2][1][1] == self.cube[2][1][2]
-            bSame = self.cube[5][1][1] == self.cube[5][0][1]
-            lSame = self.cube[3][1][1] == self.cube[3][1][0]
+            fSame = self.cube.get_front_color() == self.cube.get_front_center()
+            rSame = self.cube.get_right_color() == self.cube.get_right_center()
+            bSame = self.cube.get_back_color() == self.cube.get_back_center()
+            lSame = self.cube.get_left_color() == self.cube.get_left_center()
             condition = (fSame, rSame, bSame, lSame).count(True) >= 2
             if not condition:
                 self.m("D")
@@ -561,359 +261,218 @@ class CubeSolver:
             self.m("B2 Ui L2 U B2") #swap back-left
         elif not lSame and not fSame:
             self.m("L2 Ui F2 U L2") #swap left-front
-        fSame = self.cube[1][1][1] == self.cube[1][2][1]
-        rSame = self.cube[2][1][1] == self.cube[2][1][2]
-        bSame = self.cube[5][1][1] == self.cube[5][0][1]
-        lSame = self.cube[3][1][1] == self.cube[3][1][0]
+        fSame = self.cube.get_front_color() == self.cube.get_front_center()
+        rSame = self.cube.get_right_color() == self.cube.get_right_center()
+        bSame = self.cube.get_back_color() == self.cube.get_back_center()
+        lSame = self.cube.get_left_color() == self.cube.get_left_center()
         assert all([fSame, rSame, bSame, lSame])
 
-
-    # This is uses all the f2l algs to solve all the cases possible
     def solveFrontSlot(self):
-        # This will be F2L, with all 42 cases
-        rmid = self.cube[2][1][1]
-        fmid = self.cube[1][1][1]
-        dmid = self.cube[4][1][1]
-        # corner orientations if in U layer, first letter means the direction that the color is facing
-        fCorU = self.cube[1][0][2] == dmid and self.cube[0][2][2] == fmid and self.cube[2][2][0] == rmid
-        rCorU = self.cube[2][2][0] == dmid and self.cube[1][0][2] == fmid and self.cube[0][2][2] == rmid
-        uCorU = self.cube[0][2][2] == dmid and self.cube[2][2][0] == fmid and self.cube[1][0][2] == rmid
-        # Corner orientations for correct location in D layer
-        fCorD = self.cube[1][2][2] == dmid and self.cube[2][2][2] == fmid and self.cube[4][0][2] == rmid
-        rCorD = self.cube[2][2][2] == dmid and self.cube[4][0][2] == fmid and self.cube[1][2][2] == rmid
-        dCorD = self.cube[4][0][2] == dmid and self.cube[1][2][2] == fmid and self.cube[2][2][2] == rmid  # This is solved spot
-        # edge orientations on U layer, normal or flipped version based on F face
-        norEdgeFU = self.cube[1][0][1] == fmid and self.cube[0][2][1] == rmid
-        norEdgeLU = self.cube[3][1][2] == fmid and self.cube[0][1][0] == rmid
-        norEdgeBU = self.cube[5][2][1] == fmid and self.cube[0][0][1] == rmid
-        norEdgeRU = self.cube[2][1][0] == fmid and self.cube[0][1][2] == rmid
+        rmid = self.cube.get_right_center()
+        fmid = self.cube.get_front_center()
+        dmid = self.cube.get_bottom_center()
+        fCorU = self.cube.is_f2l_corner_U(dmid, fmid, rmid)
+        rCorU = self.cube.is_f2l_corner_U(dmid, rmid, fmid)
+        uCorU = self.cube.is_f2l_corner_U(fmid, rmid, dmid)
+        fCorD = self.cube.is_f2l_corner_D(dmid, fmid, rmid)
+        rCorD = self.cube.is_f2l_corner_D(dmid, rmid, fmid)
+        dCorD = self.cube.is_f2l_corner_D(fmid, rmid, dmid)
+        norEdgeFU = self.cube.is_f2l_edge_U(fmid, rmid)
+        norEdgeLU = self.cube.is_f2l_edge_U(fmid, rmid)
+        norEdgeBU = self.cube.is_f2l_edge_U(fmid, rmid)
+        norEdgeRU = self.cube.is_f2l_edge_U(fmid, rmid)
         norEdgeAny = norEdgeFU or norEdgeLU or norEdgeBU or norEdgeRU
-        flipEdgeFU = self.cube[0][2][1] == fmid and self.cube[1][0][1] == rmid
-        flipEdgeLU = self.cube[0][1][0] == fmid and self.cube[3][1][2] == rmid
-        flipEdgeBU = self.cube[0][0][1] == fmid and self.cube[5][2][1] == rmid
-        flipEdgeRU = self.cube[0][1][2] == fmid and self.cube[2][1][0] == rmid
+        flipEdgeFU = self.cube.is_f2l_edge_U(rmid, fmid)
+        flipEdgeLU = self.cube.is_f2l_edge_U(rmid, fmid)
+        flipEdgeBU = self.cube.is_f2l_edge_U(rmid, fmid)
+        flipEdgeRU = self.cube.is_f2l_edge_U(rmid, fmid)
         flipEdgeAny = flipEdgeFU or flipEdgeLU or flipEdgeBU or flipEdgeRU
-        # edge orientations for normal or flipped insertion into slot
-        norEdgeInsert = self.cube[1][1][2] == fmid and self.cube[2][2][1] == rmid  # This is solved spot
-        flipEdgeInsert = self.cube[2][2][1] == fmid and self.cube[1][1][2] == rmid
-        # these are for if the back right or front left slots are open or not
-        backRight = self.cube[4][2][2] == dmid and self.cube[5][1][2] == self.cube[5][0][2] == self.cube[5][1][1] and self.cube[2][0][1] == self.cube[2][0][2] == rmid
-        frontLeft = self.cube[4][0][0] == dmid and self.cube[1][1][0] == self.cube[1][2][0] == fmid and self.cube[3][2][0] == self.cube[3][2][1] == self.cube[3][1][1]
+        norEdgeInsert = self.cube.is_f2l_edge_inserted(fmid, rmid)
+        flipEdgeInsert = self.cube.is_f2l_edge_inserted(rmid, fmid)
+        backRight = self.cube.is_back_right_slot_open(dmid, rmid)
+        frontLeft = self.cube.is_front_left_slot_open(dmid, fmid)
 
         if dCorD and norEdgeInsert:
             return
-        # Easy Cases
-        elif fCorU and flipEdgeRU:  # Case 1
+        elif fCorU and flipEdgeRU:
             self.m("U R Ui Ri")
-        elif rCorU and norEdgeFU:  # Case 2
+        elif rCorU and norEdgeFU:
             self.m("F Ri Fi R")
-        elif fCorU and norEdgeLU:  # Case 3
+        elif fCorU and norEdgeLU:
             self.m("Fi Ui F")
-        elif rCorU and flipEdgeBU:  # Case 4
+        elif rCorU and flipEdgeBU:
             self.m("R U Ri")
-        # Reposition Edge
-        elif fCorU and flipEdgeBU:  # Case 5
+        elif fCorU and flipEdgeBU:
             self.m("F2 Li Ui L U F2")
-        elif rCorU and norEdgeLU:  # Case 6
+        elif rCorU and norEdgeLU:
             self.m("R2 B U Bi Ui R2")
-        elif fCorU and flipEdgeLU:  # Case 7
+        elif fCorU and flipEdgeLU:
             self.m("Ui R U2 Ri U2 R Ui Ri")
-        elif rCorU and norEdgeBU:  # Case 8
+        elif rCorU and norEdgeBU:
             self.m("U Fi U2 F Ui F Ri Fi R")
-        # Reposition edge and Corner Flip
-        elif fCorU and norEdgeBU:  # Case 9
+        elif fCorU and norEdgeBU:
             self.m("Ui R Ui Ri U Fi Ui F")
-        elif rCorU and flipEdgeLU:  # Case 10
+        elif rCorU and flipEdgeLU:
             if not backRight:
                 self.m("Ri U R2 U Ri")
             else:
                 self.m("Ui R U Ri U R U Ri")
-        elif fCorU and norEdgeRU:  # Case 11
+        elif fCorU and norEdgeRU:
             self.m("Ui R U2 Ri U Fi Ui F")
-        elif rCorU and flipEdgeFU:  # Case 12
+        elif rCorU and flipEdgeFU:
             if not backRight:
                 self.m("Ri U2 R2 U Ri")
             else:
                 self.m("Ri U2 R2 U R2 U R")
-        elif fCorU and norEdgeFU:  # Case 13
+        elif fCorU and norEdgeFU:
             if not backRight:
                 self.m("Ri U R Fi Ui F")
             else:
                 self.m("U Fi U F Ui Fi Ui F")
-        elif rCorU and flipEdgeRU:  # Case 14
+        elif rCorU and flipEdgeRU:
             self.m("Ui R Ui Ri U R U Ri")
-        # Split Pair by Going Over
-        elif fCorU and flipEdgeFU:  # Case 15
+        elif fCorU and flipEdgeFU:
             if not backRight:
                 self.m("Ui Ri U R Ui R U Ri")
             elif not frontLeft:
                 self.m("U R Ui Ri D R Ui Ri Di")
             else:
                 self.m("U Ri F R Fi U R U Ri")
-        elif rCorU and norEdgeRU:  # Case 16
+        elif rCorU and norEdgeRU:
             self.m("R Ui Ri U2 Fi Ui F")
-        elif uCorU and flipEdgeRU:  # Case 17
+        elif uCorU and flipEdgeRU:
             self.m("R U2 Ri Ui R U Ri")
-        elif uCorU and norEdgeFU:  # Case 18
+        elif uCorU and norEdgeFU:
             self.m("Fi U2 F U Fi Ui F")
-        # Pair made on side
-        elif uCorU and flipEdgeBU:  # Case 19
+        elif uCorU and flipEdgeBU:
             self.m("U R U2 R2 F R Fi")
-        elif uCorU and norEdgeLU:  # Case 20
+        elif uCorU and norEdgeLU:
             self.m("Ui Fi U2 F2 Ri Fi R")
-        elif uCorU and flipEdgeLU:  # Case 21
+        elif uCorU and flipEdgeLU:
             self.m("R B U2 Bi Ri")
-        elif uCorU and norEdgeBU:  # Case 22
+        elif uCorU and norEdgeBU:
             self.m("Fi Li U2 L F")
-        # Weird Cases
-        elif uCorU and flipEdgeFU:  # Case 23
+        elif uCorU and flipEdgeFU:
             self.m("U2 R2 U2 Ri Ui R Ui R2")
-        elif uCorU and norEdgeRU:  # Case 24
+        elif uCorU and norEdgeRU:
             self.m("U Fi Li U L F R U Ri")
-        # Corner in Place, edge in the U face (All these cases also have set-up moves in case the edge is in the wrong orientation
-        elif dCorD and flipEdgeAny:  # Case 25
+        elif dCorD and flipEdgeAny:
             if flipEdgeBU:
-                self.m("U")  # set-up move
+                self.m("U")
             elif flipEdgeLU:
-                self.m("U2")  # set-up move
+                self.m("U2")
             elif flipEdgeFU:
-                self.m("Ui")  # set-up move
+                self.m("Ui")
             if not backRight:
                 self.m("R2 Ui Ri U R2")
             else:
                 self.m("Ri Fi R U R Ui Ri F")
-        elif dCorD and norEdgeAny:  # Case 26
+        elif dCorD and norEdgeAny:
             if norEdgeRU:
-                self.m("U")  # set-up move
+                self.m("U")
             elif norEdgeBU:
-                self.m("U2")  # set-up move
+                self.m("U2")
             elif norEdgeLU:
-                self.m("Ui")  # set-up move
+                self.m("Ui")
             self.m("U R Ui Ri F Ri Fi R")
-        elif fCorD and flipEdgeAny:  # Case 27
+        elif fCorD and flipEdgeAny:
             if flipEdgeBU:
-                self.m("U")  # set-up move
+                self.m("U")
             elif flipEdgeLU:
-                self.m("U2")  # set-up move
+                self.m("U2")
             elif flipEdgeFU:
-                self.m("Ui")  # set-up move
+                self.m("Ui")
             self.m("R Ui Ri U R Ui Ri")
-        elif rCorD and norEdgeAny:  # Case 28
+        elif rCorD and norEdgeAny:
             if norEdgeRU:
-                self.m("U")  # set-up move
+                self.m("U")
             elif norEdgeBU:
-                self.m("U2")  # set-up move
+                self.m("U2")
             elif norEdgeLU:
-                self.m("Ui")  # set-up move
+                self.m("Ui")
             self.m("R U Ri Ui F Ri Fi R")
-        elif fCorD and norEdgeAny:  # Case 29
+        elif fCorD and norEdgeAny:
             if norEdgeRU:
-                self.m("U")  # set-up move
+                self.m("U")
             elif norEdgeBU:
-                self.m("U2")  # set-up move
+                self.m("U2")
             elif norEdgeLU:
-                self.m("Ui")  # set-up move
+                self.m("Ui")
             self.m("U2 R Ui Ri Fi Ui F")
-        elif rCorD and flipEdgeAny:  # Case 30
+        elif rCorD and flipEdgeAny:
             if flipEdgeBU:
-                self.m("U")  # set-up move
+                self.m("U")
             elif flipEdgeLU:
-                self.m("U2")  # set-up move
+                self.m("U2")
             elif flipEdgeFU:
-                self.m("Ui")  # set-up move
+                self.m("Ui")
             self.m("R U Ri Ui R U Ri")
-        # Edge in place, corner in U Face
-        elif uCorU and flipEdgeInsert:  # Case 31
+        elif uCorU and flipEdgeInsert:
             self.m("R U2 Ri Ui F Ri Fi R")
-        elif uCorU and norEdgeInsert:  # Case 32
+        elif uCorU and norEdgeInsert:
             self.m("R2 U R2 U R2 U2 R2")
-        elif fCorU and norEdgeInsert:  # Case 33
+        elif fCorU and norEdgeInsert:
             self.m("Ui R Ui Ri U2 R Ui Ri")
-        elif rCorU and norEdgeInsert:  # Case 34
+        elif rCorU and norEdgeInsert:
             self.m("Ui R U2 Ri U R U Ri")
-        elif fCorU and flipEdgeInsert:  # Case 35
+        elif fCorU and flipEdgeInsert:
             self.m("U2 R Ui Ri Ui Fi Ui F")
-        elif rCorU and flipEdgeInsert:  # Case 36
+        elif rCorU and flipEdgeInsert:
             self.m("U Fi Ui F Ui R U Ri")
-        # Edge and Corner in place
-        # Case 37 is Lol case, already completed
-        elif dCorD and flipEdgeInsert:  # Case 38 (Typical flipped f2l pair case
+        elif dCorD and flipEdgeInsert:
             self.m("R2 U2 F R2 Fi U2 Ri U Ri")
-        elif fCorD and norEdgeInsert:  # Case 39
+        elif fCorD and norEdgeInsert:
             self.m("R2 U2 Ri Ui R Ui Ri U2 Ri")
-        elif rCorD and norEdgeInsert:  # Case 40
+        elif rCorD and norEdgeInsert:
             self.m("R U2 R U Ri U R U2 R2")
-        elif fCorD and flipEdgeInsert:  # Case 41
+        elif fCorD and flipEdgeInsert:
             self.m("F2 Li Ui L U F Ui F")
-        elif rCorD and flipEdgeInsert:  # Case 42
+        elif rCorD and flipEdgeInsert:
             self.m("R Ui Ri Fi Li U2 L F")
 
-
-    # Returns true if the f2l Corner in FR spot is inserted and oriented correctly
     def f2lCorner(self):
-        return self.cube[4][0][2] == self.cube[4][1][1] and self.cube[1][2][2] == self.cube[1][1][1] and self.cube[2][2][2] == self.cube[2][1][1]  # This is solved spot
+        return self.cube.is_f2l_corner_solved()
 
-
-    # Returns true if the f2l edge in FR spot is inserted and oriented correctly
     def f2lEdge(self):
-        return self.cube[1][1][2] == self.cube[1][1][1] and self.cube[2][2][1] == self.cube[2][1][1]  # This is solved spot
+        return self.cube.is_f2l_edge_solved()
 
-
-    # Returns true if the f2l edge and corner are properly inserted and orientated in the FR position
     def f2lCorrect(self):
         return self.f2lCorner() and self.f2lEdge()
 
-
-    # returns if the f2l edge is on the top layer at all
     def f2lEdgeOnTop(self):
-        rmid = self.cube[2][1][1]
-        fmid = self.cube[1][1][1]
-        dmid = self.cube[4][1][1]
-        # edge orientations on U layer, normal or flipped version based on F face
-        norEdgeFU = self.cube[1][0][1] == fmid and self.cube[0][2][1] == rmid
-        norEdgeLU = self.cube[3][1][2] == fmid and self.cube[0][1][0] == rmid
-        norEdgeBU = self.cube[5][2][1] == fmid and self.cube[0][0][1] == rmid
-        norEdgeRU = self.cube[2][1][0] == fmid and self.cube[0][1][2] == rmid
-        norEdgeAny = norEdgeFU or norEdgeLU or norEdgeBU or norEdgeRU
-        flipEdgeFU = self.cube[0][2][1] == fmid and self.cube[1][0][1] == rmid
-        flipEdgeLU = self.cube[0][1][0] == fmid and self.cube[3][1][2] == rmid
-        flipEdgeBU = self.cube[0][0][1] == fmid and self.cube[5][2][1] == rmid
-        flipEdgeRU = self.cube[0][1][2] == fmid and self.cube[2][1][0] == rmid
-        flipEdgeAny = flipEdgeFU or flipEdgeLU or flipEdgeBU or flipEdgeRU
-        return norEdgeAny or flipEdgeAny
+        return self.cube.is_f2l_edge_on_top()
 
-
-    # returns true if the f2l edge is inserted. Can be properly orientated, or flipped.
     def f2lEdgeInserted(self):
-        rmid = self.cube[2][1][1]
-        fmid = self.cube[1][1][1]
-        # edge orientations for normal or flipped insertion into slot
-        norEdgeInsert = self.cube[1][1][2] == fmid and self.cube[2][2][1] == rmid  # This is solved spot
-        flipEdgeInsert = self.cube[2][2][1] == fmid and self.cube[1][1][2] == rmid
-        return norEdgeInsert or flipEdgeInsert
+        return self.cube.is_f2l_edge_inserted()
 
-
-    # This is used to determine if the front f2l edge is inserted or not, the parameter is for the requested edge. takes BR, BL, and FL as valid
     def f2lEdgeInserted2(self, p):
-        rmid = self.cube[2][1][1]
-        fmid = self.cube[1][1][1]
-        # edge orientations for normal or flipped insertion into slot
-        norEdgeInsert = self.cube[1][1][2] == fmid and self.cube[2][2][1] == rmid  # This is solved spot
-        flipEdgeInsert = self.cube[2][2][1] == fmid and self.cube[1][1][2] == rmid
-        # Edge orientations in comparison to Front and Right colors
-        BR = (self.cube[5][1][2] == fmid and self.cube[2][0][1] == rmid) or (self.cube[5][1][2] == rmid and self.cube[2][0][1] == fmid)
-        BL = (self.cube[3][0][1] == fmid and self.cube[5][1][0] == rmid) or (self.cube[3][0][1] == rmid and self.cube[5][1][0] == fmid)
-        FL = (self.cube[3][2][1] == fmid and self.cube[1][1][0] == rmid) or (self.cube[3][2][1] == rmid and self.cube[1][1][0] == fmid)
+        return self.cube.is_f2l_edge_inserted2(p)
 
-        if p == "BR":
-            if BR:
-                return True
-            else:
-                return False
-        elif p == "BL":
-            if BL:
-                return True
-            return False
-        elif p == "FL":
-            if FL:
-                return True
-            return False
-        elif p == "FR":
-            if norEdgeInsert or flipEdgeInsert:
-                return True
-        return False
-
-
-    # returns true if f2l corner is inserted, doesn't have to be orientated correctly
     def f2lCornerInserted(self):
-        rmid = self.cube[2][1][1]
-        fmid = self.cube[1][1][1]
-        dmid = self.cube[4][1][1]
-        # Corner orientations for correct location in D layer
-        fCorD = self.cube[1][2][2] == dmid and self.cube[2][2][2] == fmid and self.cube[4][0][2] == rmid
-        rCorD = self.cube[2][2][2] == dmid and self.cube[4][0][2] == fmid and self.cube[1][2][2] == rmid
-        dCorD = self.cube[4][0][2] == dmid and self.cube[1][2][2] == fmid and self.cube[2][2][2] == rmid  # This is solved spot
-        return fCorD or rCorD or dCorD
+        return self.cube.is_f2l_corner_inserted()
 
-
-    # Returns true if there is an f2l corner located in the FR orientation
     def f2lFRCor(self):
-        rmid = self.cube[2][1][1]
-        fmid = self.cube[1][1][1]
-        dmid = self.cube[4][1][1]
-        # corner orientations if in U layer, first letter means the direction that the color is facing
-        fCorU = self.cube[1][0][2] == dmid and self.cube[0][2][2] == fmid and self.cube[2][2][0] == rmid
-        rCorU = self.cube[2][2][0] == dmid and self.cube[1][0][2] == fmid and self.cube[0][2][2] == rmid
-        uCorU = self.cube[0][2][2] == dmid and self.cube[2][2][0] == fmid and self.cube[1][0][2] == rmid
-        return fCorU or rCorU or uCorU
+        return self.cube.is_f2l_FR_corner()
 
-
-    # Returns true if there is an f2l Edge located in the FU position
     def f2lFUEdge(self):
-        rmid = self.cube[2][1][1]
-        fmid = self.cube[1][1][1]
-        norEdgeFU = self.cube[1][0][1] == fmid and self.cube[0][2][1] == rmid
-        flipEdgeFU = self.cube[0][2][1] == fmid and self.cube[1][0][1] == rmid
-        return norEdgeFU or flipEdgeFU
+        return self.cube.is_f2l_FU_edge()
 
-
-    # returns true if f2l corner is located on the U layer
     def f2lCornerOnTop(self):
-        wasFound = False
-        for i in range(4):  # Does 4 U moves to find the corner
-            if self.f2lFRCor():
-                wasFound = True
-            self.m("U")
-        return wasFound
+        return self.cube.is_f2l_corner_on_top()
 
-
-    # Will return the loction of the corner that belongs in the FR spot. Either returns BR, BL, FL, or FR.
     def f2lCornerCheck(self):
-        r = "FR"
-        count = 0
-        while count < 4:
-            if count == 0:
-                if self.f2lCornerInserted():
-                    r = "FR"
-            elif count == 1:
-                if self.f2lCornerInserted():
-                    r = "FL"
-            elif count == 2:
-                if self.f2lCornerInserted():
-                    r = "BL"
-            elif count == 3:
-                if self.f2lCornerInserted():
-                    r = "BR"
-            self.m("D")
-            count += 1
-        return r
+        return self.cube.f2l_corner_check()
 
-
-    # Will return the loction of the edge that belongs in the FR spot.
-    # Either returns BR, BL, FL, or FR.
     def f2lEdgeCheck(self):
-        if self.f2lEdgeInserted2("FL"):
-            return "FL"
-        elif self.f2lEdgeInserted2("BL"):
-            return "BL"
-        elif self.f2lEdgeInserted2("BR"):
-            return "BR"
-        elif self.f2lEdgeInserted2("FR"):
-            return "FR"
-        else:
-            raise Exception("f2lEdgeCheck() Exception")
+        return self.cube.f2l_edge_check()
 
-
-
-    # This is for the case where the Edge is inserted, but the corner is not
     def f2lEdgeNoCorner(self):
-        topEdgeTop = self.cube[0][2][1]
-        topEdgeFront = self.cube[1][0][1]
-        rmid = self.cube[2][1][1]
-        bmid = self.cube[5][1][1]
-        lmid = self.cube[3][1][1]
-        fmid = self.cube[1][1][1]
-        # This is for comparing the front edge to other various edges for advanced algs/lookahead
+        topEdgeTop = self.cube.get_top_edge_top()
+        topEdgeFront = self.cube.get_top_edge_front()
+        rmid = self.cube.get_right_center()
+        bmid = self.cube.get_back_center()
+        lmid = self.cube.get_left_center()
+        fmid = self.cube.get_front_center()
         BREdge = (topEdgeTop == rmid or topEdgeTop == bmid) and (topEdgeFront == rmid or topEdgeFront == bmid)
         BLEdge = (topEdgeTop == lmid or topEdgeTop == bmid) and (topEdgeFront == lmid or topEdgeFront == bmid)
         FLEdge = (topEdgeTop == fmid or topEdgeTop == lmid) and (topEdgeFront == fmid or topEdgeFront == lmid)
@@ -944,26 +503,21 @@ class CubeSolver:
         if not self.f2lCorrect():
             raise Exception("Exception found in f2lEdgeNoCorner()")
 
-
-    # This is the case for if the corner is inserted, but the edge is not
     def f2lCornerTopNoEdge(self):
-        self.topEdgeTop = self.cube[0][2][1]
-        self.topEdgeFront = self.cube[1][0][1]
-        self.rmid = self.cube[2][1][1]
-        self.bmid = self.cube[5][1][1]
-        self.lmid = self.cube[3][1][1]
-        self.fmid = self.cube[1][1][1]
-        #This is for comparing the front edge to other various edges for advanced algs/lookahead
+        self.topEdgeTop = self.cube.get_top_edge_top()
+        self.topEdgeFront = self.cube.get_top_edge_front()
+        self.rmid = self.cube.get_right_center()
+        self.bmid = self.cube.get_back_center()
+        self.lmid = self.cube.get_left_center()
+        self.fmid = self.cube.get_front_center()
         BREdge = (self.topEdgeTop == self.rmid or self.topEdgeTop == self.bmid) and (self.topEdgeFront == self.rmid or self.topEdgeFront == self.bmid)
         BLEdge = (self.topEdgeTop == self.lmid or self.topEdgeTop == self.bmid) and (self.topEdgeFront == self.lmid or self.topEdgeFront == self.bmid)
         FLEdge = (self.topEdgeTop == self.fmid or self.topEdgeTop == self.lmid) and (self.topEdgeFront == self.fmid or self.topEdgeFront == self.lmid)
 
-        #Turn the top until the corner on the U face is in the proper position
         while True:
             if self.f2lFRCor():
                 break
             self.m("U")
-        #We will be checking additional edges to choose a more fitting alg for the sake of looking ahead
         if self.f2lEdgeCheck() == "BR":
             if BREdge:
                 self.m("Ri Ui R")
@@ -984,21 +538,17 @@ class CubeSolver:
         if not self.f2lCorrect():
             raise Exception("Exception found in f2lCornerTopNoEdge()")
 
-
-    # this is the case for if the corner is on top, and the edge is not. Neither are inserted properly. Edge must be in another slot.
     def f2lCornerTopNoEdge(self):
-        self.BackEdgeTop = self.cube[0][0][1]
-        self.BackEdgeBack = self.cube[5][2][1]
-        self.rmid = self.cube[2][1][1]
-        self.bmid = self.cube[5][1][1]
-        self.lmid = self.cube[3][1][1]
-        self.fmid = self.cube[1][1][1]
-        #This is for comparing the back edge to other various edges for advanced algs/lookahead
+        self.BackEdgeTop = self.cube.get_back_edge_top()
+        self.BackEdgeBack = self.cube.get_back_edge_back()
+        self.rmid = self.cube.get_right_center()
+        self.bmid = self.cube.get_back_center()
+        self.lmid = self.cube.get_left_center()
+        self.fmid = self.cube.get_front_center()
         BREdge = (self.BackEdgeTop == self.rmid or self.BackEdgeTop == self.bmid) and (self.BackEdgeBack == self.rmid or self.BackEdgeBack == self.bmid)
         BLEdge = (self.BackEdgeTop == self.lmid or self.BackEdgeTop == self.bmid) and (self.BackEdgeBack == self.lmid or self.BackEdgeBack == self.bmid)
         FLEdge = (self.BackEdgeTop == self.fmid or self.BackEdgeTop == self.lmid) and (self.BackEdgeBack == self.fmid or self.BackEdgeBack == self.lmid)
 
-        # Turn the top until the corner on the U face is in the proper position
         if self.f2lCornerCheck() == "BR":
             if BREdge:
                 self.m("Ri U R U")
@@ -1024,29 +574,23 @@ class CubeSolver:
         if not self.f2lCorrect():
             raise Exception("Exception found in f2lNoEdgeOrCorner()")
 
-
-    # This is the case for if the edge is on top, and the corner is not. Neither are inserted properly. Corner must be in another slot.
-    # The lookahead for this step is comparing the back edge to the slots, rather than the front one like other cases have
     def f2lEdgeTopNoCorner(self):
-        BackEdgeTop = self.cube[0][0][1]
-        BackEdgeBack = self.cube[5][2][1]
-        rmid = self.cube[2][1][1]
-        bmid = self.cube[5][1][1]
-        lmid = self.cube[3][1][1]
-        fmid = self.cube[1][1][1]
+        BackEdgeTop = self.cube.get_back_edge_top()
+        BackEdgeBack = self.cube.get_back_edge_back()
+        rmid = self.cube.get_right_center()
+        bmid = self.cube.get_back_center()
+        lmid = self.cube.get_left_center()
+        fmid = self.cube.get_front_center()
         rs1 = BackEdgeTop == rmid or BackEdgeTop == bmid
         rs2 = BackEdgeBack == rmid or BackEdgeBack == bmid
-        # This is for comparing the back edge to other various edges for advanced algs/lookahead
         BREdge = rs1 and rs2
         BLEdge = (BackEdgeTop == lmid or BackEdgeTop == bmid) and (BackEdgeBack == lmid or BackEdgeBack == bmid)
         FLEdge = (BackEdgeTop == fmid or BackEdgeTop == lmid) and (BackEdgeBack == fmid or BackEdgeBack == lmid)
 
-        # Turn the top until the corner on the U face is in the proper position
         while True:
             if self.f2lFUEdge():
                 break
             self.m("U")
-        # We will be checking additional edges to choose a more fitting alg for the sake of looking ahead
         if self.f2lCornerCheck() == "BR":
             if BREdge:
                 self.m("Ri U R U")
@@ -1067,25 +611,15 @@ class CubeSolver:
         if not self.f2lCorrect():
             raise Exception("Exception found in f2lEdgeTopNoCorner()")
 
-
-
-    # Will return true if the f2l is completed
     def isf2lDone(self):
-        rside = self.cube[2][0][1] == self.cube[2][0][2] == self.cube[2][1][1] == self.cube[2][1][2] == self.cube[2][2][1] == self.cube[2][2][2]
-        bside = self.cube[5][0][0] == self.cube[5][0][1] == self.cube[5][0][2] == self.cube[5][1][0] == self.cube[5][1][1] == self.cube[5][1][2]
-        lside = self.cube[3][0][0] == self.cube[3][0][1] == self.cube[3][1][0] == self.cube[3][1][1] == self.cube[3][2][0] == self.cube[3][2][1]
-        fside = self.cube[1][1][0] == self.cube[1][1][1] == self.cube[1][1][2] == self.cube[1][2][0] == self.cube[1][2][1] == self.cube[1][2][2]
-        return rside and bside and lside and fside
+        return self.cube.is_f2l_done()
 
-
-    # f2l will solve the first 2 layers, checks for each case, then does a Y move to check the next
     def f2l(self):
         pairsSolved = 0
         uMoves = 0
         while pairsSolved < 4:
             if not self.f2lCorrect():
-                # while not f2lCorrect():
-                while uMoves < 4:  # 4 moves before checking rare cases
+                while uMoves < 4:
                     self.solveFrontSlot()
                     if self.f2lCorrect():
                         pairsSolved += 1
@@ -1104,7 +638,6 @@ class CubeSolver:
                         self.f2l_list.append("Rare case 2")
                         self.f2lCornerNoEdge()
                         pairsSolved += 1
-                    # At this point, they can't be inserted, must be in U or other spot
                     elif not self.f2lEdgeOnTop() and self.f2lCornerOnTop():
                         self.f2l_list.append("Rare Case 3")
                         self.f2lCornerTopNoEdge()
@@ -1128,18 +661,14 @@ class CubeSolver:
             self.m("Y")
         assert (self.isf2lDone())
 
-
     def fish(self):
-        return [self.cube[0][0][0], self.cube[0][0][2], self.cube[0][2][0], self.cube[0][2][2]].count(self.cube[0][1][1]) == 1
-
+        return self.cube.is_fish()
 
     def sune(self):
         self.m("R U Ri U R U2 Ri")
 
-
     def antisune(self):
         self.m("R U2 Ri Ui R Ui Ri")
-
 
     def getfish(self):
         for i in range(4):
@@ -1152,33 +681,25 @@ class CubeSolver:
             self.m("U")
         assert self.fish()
 
-
     def bOLL(self):
         self.getfish()
         if self.fish():
-            while self.cube[0][0][2] != self.cube[0][1][1]:
+            while self.cube.get_top_corner() != self.cube.get_top_center():
                 self.m("U")
-            if self.cube[1][0][0] == self.cube[0][1][1]:
+            if self.cube.get_front_corner() == self.cube.get_top_center():
                 self.antisune()
-            elif self.cube[5][2][0] == self.cube[0][1][1]:
-                self.m("U2");
-                self.sune();
+            elif self.cube.get_back_corner() == self.cube.get_top_center():
+                self.m("U2")
+                self.sune()
             else:
                 raise Exception("Something went wrong")
         else:
             raise Exception("Fish not set up")
         assert self.isTopSolved()
 
-
     def getCornerState(self):
-        corner0 = self.cube[1][0][0] == self.cube[1][1][1] and self.cube[3][2][2] == self.cube[3][1][1]
-        corner1 = self.cube[1][0][2] == self.cube[1][1][1] and self.cube[2][2][0] == self.cube[2][1][1]
-        corner2 = self.cube[5][2][2] == self.cube[5][1][1] and self.cube[2][0][0] == self.cube[2][1][1]
-        corner3 = self.cube[5][2][0] == self.cube[5][1][1] and self.cube[3][0][2] == self.cube[3][1][1]
-        return [corner0, corner1, corner2, corner3]
+        return self.cube.get_corner_state()
 
-
-    # Does permutation of the top layer corners, orients them properly
     def permuteCorners(self):
         for i in range(2):
             for j in range(4):
@@ -1189,7 +710,7 @@ class CubeSolver:
                     index = self.getCornerState().index(True)
                     for k in range(index):
                         self.m("Y")
-                    if self.cube[1][0][2] == self.cube[2][1][1]:
+                    if self.cube.get_front_corner() == self.cube.get_right_center():
                         self.m("R2 B2 R F Ri B2 R Fi R")
                     else:
                         self.m("Ri F Ri B2 R Fi Ri B2 R2")
@@ -1199,22 +720,20 @@ class CubeSolver:
                 self.m("U")
             self.m("R2 B2 R F Ri B2 R Fi R")
 
-
-    # Does permutation of the top layer edges, must be H, Z or U perms after orientation
     def permuteEdges(self):
         if all(self.getEdgeState()):
             return
-        if self.cube[1][0][1] == self.cube[5][1][1] and self.cube[5][2][1] == self.cube[1][1][1]:  # H perm
+        if self.cube.get_front_edge() == self.cube.get_back_center() and self.cube.get_back_edge() == self.cube.get_front_center():
             self.m("R2 U2 R U2 R2 U2 R2 U2 R U2 R2")
-        elif self.cube[1][0][1] == self.cube[2][1][1] and self.cube[2][1][0] == self.cube[1][1][1]:  # Normal Z perm
+        elif self.cube.get_front_edge() == self.cube.get_right_center() and self.cube.get_right_edge() == self.cube.get_front_center():
             self.m("U Ri Ui R Ui R U R Ui Ri U R U R2 Ui Ri U")
-        elif self.cube[1][0][1] == self.cube[3][1][1] and self.cube[3][1][2] == self.cube[1][1][1]:  # Not oriented Z perm
+        elif self.cube.get_front_edge() == self.cube.get_left_center() and self.cube.get_left_edge() == self.cube.get_front_center():
             self.m("Ri Ui R Ui R U R Ui Ri U R U R2 Ui Ri U2")
         else:
             uNum = 0
             while True:
-                if self.cube[5][2][0] == self.cube[5][2][1] == self.cube[5][2][2]:  # solid bar is on back then
-                    if self.cube[3][1][2] == self.cube[1][0][0]:  # means we have to do counterclockwise cycle
+                if self.cube.get_back_edge() == self.cube.get_back_center():
+                    if self.cube.get_left_edge() == self.cube.get_front_corner():
                         self.m("R Ui R U R U R Ui Ri Ui R2")
                         break
                     else:
@@ -1226,71 +745,28 @@ class CubeSolver:
             for x in range(uNum):
                 self.m("Ui")
 
-
     def getEdgeState(self):
-        fEdge = self.cube[1][0][1] == self.cube[1][1][1]
-        rEdge = self.cube[2][1][0] == self.cube[2][1][1]
-        bEdge = self.cube[5][2][1] == self.cube[5][1][1]
-        lEdge = self.cube[3][1][2] == self.cube[3][1][1]
-        return [fEdge, rEdge, bEdge, lEdge]
-
+        return self.cube.get_edge_state()
 
     def topCorners(self):
         self.permuteCorners()
         assert all(self.getCornerState())
 
-
     def topEdges(self):
         self.permuteEdges()
         assert all(self.getEdgeState())
-
 
     def bPLL(self):
         self.topCorners()
         self.topEdges()
 
-
     def isSolved(self):
-        uside = self.cube[0][0][0] == self.cube[0][0][1] == self.cube[0][0][2] == self.cube[0][1][0] == self.cube[0][1][1] == self.cube[0][1][2] == self.cube[0][2][0] == self.cube[0][2][
-            1] == self.cube[0][2][2]
-        fside = self.cube[1][0][0] == self.cube[1][0][1] == self.cube[1][0][2] == self.cube[1][1][0] == self.cube[1][1][1] == self.cube[1][1][2] == self.cube[1][2][0] == self.cube[1][2][
-            1] == self.cube[1][2][2]
-        rside = self.cube[2][0][0] == self.cube[2][0][1] == self.cube[2][0][2] == self.cube[2][1][0] == self.cube[2][1][1] == self.cube[2][1][2] == self.cube[2][2][0] == self.cube[2][2][
-            1] == self.cube[2][2][2]
-        lside = self.cube[3][0][0] == self.cube[3][0][1] == self.cube[3][0][2] == self.cube[3][1][0] == self.cube[3][1][1] == self.cube[3][1][2] == self.cube[3][2][0] == self.cube[3][2][
-            1] == self.cube[3][2][2]
-        dside = self.cube[4][0][0] == self.cube[4][0][1] == self.cube[4][0][2] == self.cube[4][1][0] == self.cube[4][1][1] == self.cube[4][1][2] == self.cube[4][2][0] == self.cube[4][2][
-            1] == self.cube[4][2][2]
-        bside = self.cube[5][0][0] == self.cube[5][0][1] == self.cube[5][0][2] == self.cube[5][1][0] == self.cube[5][1][1] == self.cube[5][1][2] == self.cube[5][2][0] == self.cube[5][2][
-            1] == self.cube[5][2][2]
-        return uside and fside and rside and lside and dside and bside
-
+        return self.cube.is_solved()
 
     def isCrossSolved(self):
-        # Check if bottom cross edges match the center color
-        bottom_center = self.cube[4][1][1]  # Yellow center
-        
-        # Check if all cross edges on bottom face are yellow
-        cross_edges_yellow = (
-            self.cube[4][0][1] == bottom_center and  # Front edge
-            self.cube[4][1][2] == bottom_center and  # Right edge
-            self.cube[4][2][1] == bottom_center and  # Back edge
-            self.cube[4][1][0] == bottom_center      # Left edge
-        )
-        
-        # Check if cross edges match their center colors
-        edges_aligned = (
-            self.cube[1][2][1] == self.cube[1][1][1] and  # Front edge matches front center
-            self.cube[2][2][1] == self.cube[2][1][1] and  # Right edge matches right center
-            self.cube[5][2][1] == self.cube[5][1][1] and  # Back edge matches back center
-            self.cube[3][2][1] == self.cube[3][1][1]      # Left edge matches left center
-        )
-        
-        return cross_edges_yellow and edges_aligned
-
+        return self.cube.is_cross_solved()
 
     def solve(self):
-        
         self.cross()
         self.simplify_moves()
         self.step_moves_list[0] = self.solution_length

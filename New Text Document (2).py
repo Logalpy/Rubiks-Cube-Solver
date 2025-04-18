@@ -31,15 +31,19 @@ class ThistlethwaiteSolver:
              "M", "M'", "M2","E","E'","E2","S","S'","S2"],  # Added slice moves for Phase 0
             
             # Phase 1: Quarter turns of U/D, half turns of others
-            ["L", "R'", "F", "B", "U2'", "D2", "F2", "F'"
-             "L'", "L2", "R'", "R2", "B'", "B2",
+            ["U", "U'", "U2", "D", "D'", "D2", 
+             "R2", "L2", "F2", "B2",
              "M2", "E2", "S2"],  # Half turns for edge slice positioning
             
-            # Phase 2
-            ["L", "R", "L'", "R'", "F2", "B2", "U2", "D2"],     
+            # Phase 2: All moves needed to fix R U R' case
+            # After R U R', we need either U' R' to undo or R U to complete
+            ["D", "D'", "U", "U'",  # Quarter turns needed to fix the case
+             "R2", "U2", "D2",      # Half turns for general edge slice positioning
+             "F2", "B2", "L2"],     # Additional half turns if needed
+            
             # Phase 3: Allow quarter turns of U/D and half turns of others
             # Include more moves to handle parity cases
-            ["U2", "D2",  # U/D moves
+            ["U", "U'", "U2", "D", "D'", "D2",  # U/D moves
              "R2", "L2", "F2", "B2"]  
         ]
     
@@ -307,39 +311,46 @@ class ThistlethwaiteSolver:
             return ''.join(bits)
 
         elif phase == 2:
-            bits = []
-            # E‑slice edges: both stickers ∈ {G,B,O,R}
-            for f1,p1,f2,p2 in [
+            # E‑slice edges: must only have F/B/L/R colors _and_ be on F/B faces
+            e_colors = set('GBOR')
+            e_edges = [
                 ('F',(1,0),'L',(1,2)), ('F',(1,2),'R',(1,0)),
                 ('B',(1,0),'L',(1,0)), ('B',(1,2),'R',(1,2)),
-            ]:
+            ]
+            bits = []
+            for f1,p1,f2,p2 in e_edges:
                 s1 = self.cube.faces[f1][p1[0]][p1[1]]
                 s2 = self.cube.faces[f2][p2[0]][p2[1]]
-                ok = set((s1,s2)).issubset(set("GBOR"))
-                bits.append('0' if ok else '1')
+                # oriented iff both stickers in e_colors AND the sticker with G/B is on F/B
+                ok1 = s1 in e_colors and (s1 in 'GB' and f1 in ['F','B'] or s1 in 'OR')
+                ok2 = s2 in e_colors and (s2 in 'GB' and f2 in ['F','B'] or s2 in 'OR')
+                bits.append('0' if ok1 and ok2 else '1')
 
-            # M‑slice edges: at least one sticker ∈ {W,Y}
-            for f1,p1,f2,p2 in [
+            # M‑slice: must have W/Y on L/R
+            m_edges = [
                 ('U',(1,0),'L',(0,1)), ('D',(1,0),'L',(2,1)),
                 ('U',(1,2),'R',(0,1)), ('D',(1,2),'R',(2,1)),
-            ]:
+            ]
+            for f1,p1,f2,p2 in m_edges:
                 s1 = self.cube.faces[f1][p1[0]][p1[1]]
                 s2 = self.cube.faces[f2][p2[0]][p2[1]]
-                ok = (s1 in "WY") or (s2 in "WY")
-                bits.append('0' if ok else '1')
+                oriented = ((s1 in ['W','Y'] and f1 in ['L','R']) or
+                            (s2 in ['W','Y'] and f2 in ['L','R']))
+                bits.append('0' if oriented else '1')
 
-            # S‑slice edges: at least one sticker ∈ {W,Y}
-            for f1,p1,f2,p2 in [
+            # S‑slice: must have W/Y on U/D
+            s_edges = [
                 ('U',(2,1),'F',(0,1)), ('D',(0,1),'F',(2,1)),
                 ('U',(0,1),'B',(0,1)), ('D',(2,1),'B',(2,1)),
-            ]:
+            ]
+            for f1,p1,f2,p2 in s_edges:
                 s1 = self.cube.faces[f1][p1[0]][p1[1]]
                 s2 = self.cube.faces[f2][p2[0]][p2[1]]
-                ok = (s1 in "WY") or (s2 in "WY")
-                bits.append('0' if ok else '1')
+                oriented = ((s1 in ['W','Y'] and f1 in ['U','D']) or
+                            (s2 in ['W','Y'] and f2 in ['U','D']))
+                bits.append('0' if oriented else '1')
 
-            return "".join(bits)
-        
+            return ''.join(bits)
         elif phase == 3:
             # Use a full‐cube facelet string to detect repeats
             # faces in fixed order U,D,F,B,L,R
@@ -435,15 +446,10 @@ class ThistlethwaiteSolver:
                         misplaced += 1
         # at least one move if anything is wrong
         return max(1, misplaced // 12)
-    
-    def all_edges_bad(self):
-        """Return True if all 12 edges are 'BAD' (i.e. mis‐oriented == '1')."""
-        bits = self.get_phase0_edge_orientations()
-        return bits.count('1') == len(bits)
 
     def solve_phase(self, phase):
         """Solve a specific phase of the Thistlethwaite algorithm using iterative deepening with improved state tracking"""
-        max_moves = [15, 10, 24, 18]  # Maximum moves per phase
+        max_moves = [15, 10, 20, 18]  # Maximum moves per phase
         max_depth = max_moves[phase]
         current_moves = []
         solution_found = False
@@ -460,10 +466,7 @@ class ThistlethwaiteSolver:
 
         def check_phase_solved():
             if phase == 0:
-                if self.all_edges_bad():
-                    return ["D", "B", "F", "U", "R'", "L'", "D'"]
-                else:
-                    return self.get_phase0_state()
+                return self.get_phase0_state()
             elif phase == 1:
                 return self.get_phase1_state()
             elif phase == 2:

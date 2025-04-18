@@ -28,11 +28,7 @@ def debug_phase3():
     
     # Debug cube state
     print("\nDebug cube state:")
-    faces = ['U', 'D', 'F', 'B', 'L', 'R']
-    for face in faces:
-        print(f"{face} face:")
-        for row in cube.faces[face]:
-            print(''.join(row))
+    print(cube)
 
 if __name__ == "__main__":
     debug_phase3()

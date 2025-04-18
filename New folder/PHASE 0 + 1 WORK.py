@@ -2,23 +2,7 @@ from cube import RubiksCube
 
 class ThistlethwaiteSolver:
     def __init__(self, cube: RubiksCube):
-        if isinstance(cube, dict):
-            cube_obj = RubiksCube()
-            mapping = {
-                'top': 'U',
-                'front': 'F',
-                'bottom': 'D',
-                'left': 'L',
-                'right': 'R',
-                'back': 'B'
-            }
-            for key, face in mapping.items():
-                # deep‑copy each 3×3 array into cube_obj.faces
-                cube_obj.faces[face] = [row[:] for row in cube[key]]
-            self.cube = cube_obj
-        else:
-            self.cube = cube if cube else RubiksCube()
-
+        self.cube = cube if cube else RubiksCube()
         self.SLICE_MOVE_THRESHOLD = 45
         # Define standard face colors
         self.face_colors = {'U': 'W', 'D': 'Y', 'F': 'G', 'B': 'B', 'L': 'O', 'R': 'R'}
@@ -31,30 +15,23 @@ class ThistlethwaiteSolver:
              "M", "M'", "M2","E","E'","E2","S","S'","S2"],  # Added slice moves for Phase 0
             
             # Phase 1: Quarter turns of U/D, half turns of others
-            ["L", "R'", "F", "B", "U2'", "D2", "F2", "F'"
-             "L'", "L2", "R'", "R2", "B'", "B2",
+            ["U", "U'", "U2", "D", "D'", "D2", 
+             "R2", "L2", "F2", "B2",
              "M2", "E2", "S2"],  # Half turns for edge slice positioning
             
-            # Phase 2
-            ["L", "R", "L'", "R'", "F2", "B2", "U2", "D2"],     
+            # Phase 2: All moves needed to fix R U R' case
+            # After R U R', we need either U' R' to undo or R U to complete
+            ["R", "R'", "U", "U'",  # Quarter turns needed to fix the case
+             "R2", "U2", "D2",      # Half turns for general edge slice positioning
+             "F2", "B2", "L2"],     # Additional half turns if needed
+            
             # Phase 3: Allow quarter turns of U/D and half turns of others
             # Include more moves to handle parity cases
-            ["U2", "D2",  # U/D moves
-             "R2", "L2", "F2", "B2"]  
+            ["U", "U'", "U2", "D", "D'", "D2",  # U/D moves
+             "R2", "L2", "F2", "B2",            # Half turns
+             "M2", "E2", "S2"]                  # Slice moves for parity
         ]
-    
-
-    def solve(self):
-        """Run all 4 Thistlethwaite phases and return the full move list."""
-        self.step_moves_list = []
-        full = []
-        for phase in range(4):
-            moves = self.solve_phase(phase)
-            self.step_moves_list.append(moves)
-            full.extend(moves)
-        return full
-
-
+        
     def get_phase0_state(self):
         """
         Check edge orientations according to Thistlethwaite's rules:
@@ -118,7 +95,11 @@ class ThistlethwaiteSolver:
         return all(ch=='0' for ch in h)
 
     def get_phase2_state(self):
-        """Check edge positions - edges must be in their correct slice."""
+        """Check edge positions - edges must be in their correct slice.
+        In Phase 2:
+        - E slice edges (middle layer) must only have F/B/L/R colors
+        - M slice edges must have at least one U/D color
+        - S slice edges must have at least one U/D color"""
         def check_edge_colors(face1, pos1, face2, pos2, allowed_colors, label):
             sticker1 = self.cube.faces[face1][pos1[0]][pos1[1]]
             sticker2 = self.cube.faces[face2][pos2[0]][pos2[1]]
@@ -126,46 +107,47 @@ class ThistlethwaiteSolver:
                 print(f"Misoriented {label} edge: {face1}{pos1}-{face2}{pos2} stickers: {sticker1}, {sticker2}")
                 return False
             return True
-
         def has_ud_color(face1, pos1, face2, pos2, label):
             sticker1 = self.cube.faces[face1][pos1[0]][pos1[1]]
             sticker2 = self.cube.faces[face2][pos2[0]][pos2[1]]
-            if not (sticker1 in ['W','Y'] or sticker2 in ['W','Y']):
+            if not (sticker1 in ['W', 'Y'] or sticker2 in ['W', 'Y']):
                 print(f"Misoriented {label} edge: {face1}{pos1}-{face2}{pos2} stickers: {sticker1}, {sticker2}")
                 return False
             return True
-
-        # E‑slice edges must only have F/B/L/R colors
-        e_slice_colors = ['G','B','O','R']
+        # E slice edges (middle layer)
+        e_slice_colors = ['G', 'B', 'O', 'R']
         e_slice = [
-            ('F',(1,0),'L',(1,2)), ('F',(1,2),'R',(1,0)),
-            ('B',(1,0),'L',(1,0)), ('B',(1,2),'R',(1,2)),
+            ('F', (1,0), 'L', (1,2)),  # FL
+            ('F', (1,2), 'R', (1,0)),  # FR
+            ('B', (1,0), 'L', (1,0)),  # BL
+            ('B', (1,2), 'R', (1,2)),  # BR
         ]
         e_mis = 0
-        for f1,p1,f2,p2 in e_slice:
-            if not check_edge_colors(f1,p1,f2,p2,e_slice_colors,'E‑slice'):
+        for edge in e_slice:
+            if not check_edge_colors(*edge, e_slice_colors, label='E-slice'):
                 e_mis += 1
-
-        # M‑slice edges must have at least one U/D color
+        # M slice edges (must have U/D color)
         m_slice = [
-            ('U',(1,0),'L',(0,1)), ('D',(1,0),'L',(2,1)),
-            ('U',(1,2),'R',(0,1)), ('D',(1,2),'R',(2,1)),
+            ('U', (1,0), 'L', (0,1)),  # UL
+            ('D', (1,0), 'L', (2,1)),  # DL
+            ('U', (1,2), 'R', (0,1)),  # UR
+            ('D', (1,2), 'R', (2,1)),  # DR
         ]
         m_mis = 0
-        for f1,p1,f2,p2 in m_slice:
-            if not has_ud_color(f1,p1,f2,p2,'M‑slice'):
+        for edge in m_slice:
+            if not has_ud_color(*edge, label='M-slice'):
                 m_mis += 1
-
-        # S‑slice edges must have at least one U/D color
+        # S slice edges (must have U/D color)
         s_slice = [
-            ('U',(2,1),'F',(0,1)), ('D',(0,1),'F',(2,1)),
-            ('U',(0,1),'B',(0,1)), ('D',(2,1),'B',(2,1)),
+            ('U', (2,1), 'F', (0,1)),  # UF
+            ('D', (0,1), 'F', (2,1)),  # DF
+            ('U', (0,1), 'B', (0,1)),  # UB
+            ('D', (2,1), 'B', (2,1)),  # DB
         ]
         s_mis = 0
-        for f1,p1,f2,p2 in s_slice:
-            if not has_ud_color(f1,p1,f2,p2,'S‑slice'):
+        for edge in s_slice:
+            if not has_ud_color(*edge, label='S-slice'):
                 s_mis += 1
-
         total_mis = e_mis + m_mis + s_mis
         print(f"Total misoriented phase 2 edges: {total_mis}")
         return total_mis == 0
@@ -194,11 +176,20 @@ class ThistlethwaiteSolver:
     def get_phase3_state(self):
         """Check if cube is solved - each face should be a single color"""
         # Check each face for a single color
-        for face, target in self.face_colors.items():
-            for row in self.cube.faces[face]:
-                for s in row:
-                    if s != target:
+        for face, target_color in self.face_colors.items():
+            center_color = self.cube.faces[face][1][1]
+            # First verify that center matches expected color
+            if center_color != target_color:
+                print(f"Center of face {face} is {center_color}, expected {target_color}")
+                return False
+                
+            # Then check that all stickers match the center
+            for i in range(3):
+                for j in range(3):
+                    if self.cube.faces[face][i][j] != target_color:
+                        print(f"Mismatch on face {face} at ({i},{j}): {self.cube.faces[face][i][j]} != {target_color}")
                         return False
+        
         return True
 
     def get_phase0_edge_orientations(self):
@@ -307,50 +298,61 @@ class ThistlethwaiteSolver:
             return ''.join(bits)
 
         elif phase == 2:
-            bits = []
-            # E‑slice edges: both stickers ∈ {G,B,O,R}
-            for f1,p1,f2,p2 in [
-                ('F',(1,0),'L',(1,2)), ('F',(1,2),'R',(1,0)),
-                ('B',(1,0),'L',(1,0)), ('B',(1,2),'R',(1,2)),
-            ]:
-                s1 = self.cube.faces[f1][p1[0]][p1[1]]
-                s2 = self.cube.faces[f2][p2[0]][p2[1]]
-                ok = set((s1,s2)).issubset(set("GBOR"))
-                bits.append('0' if ok else '1')
-
-            # M‑slice edges: at least one sticker ∈ {W,Y}
-            for f1,p1,f2,p2 in [
-                ('U',(1,0),'L',(0,1)), ('D',(1,0),'L',(2,1)),
-                ('U',(1,2),'R',(0,1)), ('D',(1,2),'R',(2,1)),
-            ]:
-                s1 = self.cube.faces[f1][p1[0]][p1[1]]
-                s2 = self.cube.faces[f2][p2[0]][p2[1]]
-                ok = (s1 in "WY") or (s2 in "WY")
-                bits.append('0' if ok else '1')
-
-            # S‑slice edges: at least one sticker ∈ {W,Y}
-            for f1,p1,f2,p2 in [
-                ('U',(2,1),'F',(0,1)), ('D',(0,1),'F',(2,1)),
-                ('U',(0,1),'B',(0,1)), ('D',(2,1),'B',(2,1)),
-            ]:
-                s1 = self.cube.faces[f1][p1[0]][p1[1]]
-                s2 = self.cube.faces[f2][p2[0]][p2[1]]
-                ok = (s1 in "WY") or (s2 in "WY")
-                bits.append('0' if ok else '1')
-
-            return "".join(bits)
-        
-        elif phase == 3:
-            # Use a full‐cube facelet string to detect repeats
-            # faces in fixed order U,D,F,B,L,R
-            key = []
-            for face in ['U','D','F','B','L','R']:
-                key.append(face)
-                for row in self.cube.faces[face]:
-                    key.extend(row)
-            return ''.join(key)
+            # For phase 2, encode slice edge positions (0 if in correct slice, 1 otherwise)
+            # E slice edges (should only have F/B/L/R colors)
+            e_slice_colors = ['G', 'B', 'O', 'R']
+            e_edges = [
+                ('F', (1,0), 'L', (1,2)),  # FL
+                ('F', (1,2), 'R', (1,0)),  # FR
+                ('B', (1,0), 'L', (1,0)),  # BL
+                ('B', (1,2), 'R', (1,2)),  # BR
+            ]
+            e_slice = []
+            for face1, pos1, face2, pos2 in e_edges:
+                s1 = self.cube.faces[face1][pos1[0]][pos1[1]]
+                s2 = self.cube.faces[face2][pos2[0]][pos2[1]]
+                e_slice.append('0' if s1 in e_slice_colors and s2 in e_slice_colors else '1')
+            # M slice edges (should have one U/D color)
+            m_slice = [
+                ('U', (1,0), 'L', (0,1)),  # UL
+                ('D', (1,0), 'L', (2,1)),  # DL
+                ('U', (1,2), 'R', (0,1)),  # UR
+                ('D', (1,2), 'R', (2,1)),  # DR
+            ]
+            m_slice_bits = []
+            for face1, pos1, face2, pos2 in m_slice:
+                s1 = self.cube.faces[face1][pos1[0]][pos1[1]]
+                s2 = self.cube.faces[face2][pos2[0]][pos2[1]]
+                m_slice_bits.append('0' if (s1 in ['W','Y'] or s2 in ['W','Y']) else '1')
+            # S slice edges (should have one U/D color)
+            s_slice = [
+                ('U', (2,1), 'F', (0,1)),  # UF
+                ('D', (0,1), 'F', (2,1)),  # DF
+                ('U', (0,1), 'B', (0,1)),  # UB
+                ('D', (2,1), 'B', (2,1)),  # DB
+            ]
+            s_slice_bits = []
+            for face1, pos1, face2, pos2 in s_slice:
+                s1 = self.cube.faces[face1][pos1[0]][pos1[1]]
+                s2 = self.cube.faces[face2][pos2[0]][pos2[1]]
+                s_slice_bits.append('0' if (s1 in ['W','Y'] or s2 in ['W','Y']) else '1')
+            return ''.join(e_slice + m_slice_bits + s_slice_bits)
         else:
-            raise ValueError(f"Unknown phase {phase}")
+            # For phase 3, create a more compact hash that captures essential state
+            # but allows for some symmetries
+            state = []
+            
+            # Hash only the non-center stickers, relative to their centers
+            for face in ['U', 'D', 'F', 'B', 'L', 'R']:
+                center = self.cube.faces[face][1][1]
+                for i in range(3):
+                    for j in range(3):
+                        if i != 1 or j != 1:  # Skip centers
+                            # Store if sticker matches its center
+                            state.append('1' if self.cube.faces[face][i][j] == center else '0')
+            
+            return ''.join(state)
+        return str(self.cube.faces)
     
     def find_corner(self, target_colors):
         # Search all corners to find the one with the target colors
@@ -426,24 +428,31 @@ class ThistlethwaiteSolver:
         return False
             
     def _phase3_heuristic(self):
-        """Simple lower‐bound: count mis‐colored facelets."""
+        """Simpler, more permissive heuristic for phase 3"""
         misplaced = 0
-        for face, target in self.face_colors.items():
+        
+        # First check centers
+        for face in self.face_colors:
+            if self.cube.faces[face][1][1] != self.face_colors[face]:
+                return float('inf')
+        
+        # Count misplaced stickers with reduced weight
+        for face in self.face_colors:
+            target = self.face_colors[face]
             for i in range(3):
                 for j in range(3):
                     if self.cube.faces[face][i][j] != target:
-                        misplaced += 1
-        # at least one move if anything is wrong
-        return max(1, misplaced // 12)
-    
-    def all_edges_bad(self):
-        """Return True if all 12 edges are 'BAD' (i.e. mis‐oriented == '1')."""
-        bits = self.get_phase0_edge_orientations()
-        return bits.count('1') == len(bits)
+                        if (i in [0,2] and j in [0,2]):  # corners
+                            misplaced += 2
+                        else:  # edges
+                            misplaced += 1
+        
+        # More permissive estimate
+        return max(1, misplaced // 12)  # At least 1 move if any stickers wrong
 
     def solve_phase(self, phase):
         """Solve a specific phase of the Thistlethwaite algorithm using iterative deepening with improved state tracking"""
-        max_moves = [15, 10, 24, 18]  # Maximum moves per phase
+        max_moves = [15, 10, 13, 18]  # Maximum moves per phase
         max_depth = max_moves[phase]
         current_moves = []
         solution_found = False
@@ -460,10 +469,7 @@ class ThistlethwaiteSolver:
 
         def check_phase_solved():
             if phase == 0:
-                if self.all_edges_bad():
-                    return ["D", "B", "F", "U", "R'", "L'", "D'"]
-                else:
-                    return self.get_phase0_state()
+                return self.get_phase0_state()
             elif phase == 1:
                 return self.get_phase1_state()
             elif phase == 2:
@@ -482,29 +488,28 @@ class ThistlethwaiteSolver:
                 solution_found = True
                 best_solution = current_moves.copy()
                 return True
-            
-            if phase == 3 and self._phase3_heuristic() > depth:
-                return False
                 
             if depth == 0:
                 return False
 
-            for move in get_valid_moves(last_move):
+            valid_moves = get_valid_moves(last_move)
+            for move in valid_moves:
+                if solution_found:
+                    break
+                    
                 current_moves.append(move)
                 self.cube.move(move)
-
+                
                 new_hash = self.get_state_hash(phase)
                 if new_hash not in visited_states or len(current_moves) < visited_states[new_hash]:
                     visited_states[new_hash] = len(current_moves)
-                    # >>> comment out this next line <<<
-                    # print(f"Trying move: {move} at depth {max_depth - depth + 1}")
-
+                    print(f"Trying move: {move} at depth {max_depth - depth + 1}")
                     if solve_at_depth(depth - 1, new_hash, move):
                         return True
-
+                
                 self.cube.move(self.inverse_move(move))
                 current_moves.pop()
-
+            
             return False
 
         # Try increasingly deeper searches

@@ -1,5 +1,3 @@
-
-
 class RubiksCube:
     def __init__(self):
         # Initialize the cube with 6 faces, each a 3x3 array
@@ -34,28 +32,18 @@ class RubiksCube:
                 self.faces[face_key] = [row[:] for row in face_data]
             elif face_name == 'right':
                 # columns top-bottom, right-left
-                self.faces[face_key] = [
-                    [face_data[row][col] for col in range(3) for row in reversed(range(3))][i*3:(i+1)*3]
-                    for i in range(3)
-                ]
+                self.faces[face_key] = [[face_data[j][2] for j in range(3)] for i in range(3)]
             elif face_name == 'front':
                 self.faces[face_key] = [row[:] for row in face_data]
             elif face_name == 'bottom':
                 # rows left-right, bottom-top
-                self.faces[face_key] = [
-                    [face_data[row][col] for col in range(3)] for row in range(3)
-                ]
+                self.faces[face_key] = [row[:] for row in face_data]
             elif face_name == 'left':
                 # columns top-bottom, left-right
-                self.faces[face_key] = [
-                    [face_data[row][col] for col in reversed(range(3)) for row in range(3)][i*3:(i+1)*3]
-                    for i in range(3)
-                ]
+                self.faces[face_key] = [[face_data[j][0] for j in range(3)] for i in range(3)]
             elif face_name == 'back':
                 # rows right-left, bottom-top
-                self.faces[face_key] = [
-                    list(reversed(row)) for row in reversed(face_data)
-                ]
+                self.faces[face_key] = [[face_data[i][2-j] for j in range(3)] for i in range(3)]
 
     def rotate_face_clockwise(self, face):
         # Rotate a single face 90 degrees clockwise
@@ -300,6 +288,145 @@ class RubiksCube:
             self.move("R")
             self.move("R")
 
+        elif move == "S":
+            temp = [self.faces['U'][1][i] for i in range(3)]
+            for i in range(3):
+                self.faces['U'][1][i] = self.faces['L'][2-i][1]
+            for i in range(3):
+                self.faces['L'][i][1] = self.faces['D'][1][i]
+            for i in range(3):
+                self.faces['D'][1][i] = self.faces['R'][2-i][1]
+            for i in range(3):
+                self.faces['R'][i][1] = temp[i]
+        elif move == "S2":
+            self.move("S")
+            self.move("S")
+        elif move == "S'": 
+            temp = [self.faces['U'][1][i] for i in range(3)]
+            for i in range(3):
+                self.faces['U'][1][i] = self.faces['R'][i][1]
+            for i in range(3):
+                self.faces['R'][i][1] = self.faces['D'][1][2-i]
+            for i in range(3):
+                self.faces['D'][1][i] = self.faces['L'][i][1]
+            for i in range(3):
+                self.faces['L'][2-i][1] = temp[i]
+        elif move == "E'":
+            temp = [self.faces['F'][1][i] for i in range(3)]
+            
+            # Move right to front (with rotation)
+            for i in range(3):
+                self.faces['F'][1][i] = self.faces['R'][1][i]
+            
+            # Move back to right (with rotation)
+            for i in range(3):
+                self.faces['R'][1][i] = self.faces['B'][1][i]
+            
+            # Move left to back
+            for i in range(3):
+                self.faces['B'][1][i] = self.faces['L'][1][i]
+            
+            # Move temp (original up) to front
+            for i in range(3):
+                self.faces['L'][1][i] = temp[i]
+        elif move == "E":
+            temp = [self.faces['L'][0][i] for i in range(3)]
+            
+            # Move back to left (with rotation)
+            for i in range(3):
+                self.faces['L'][1][i] = self.faces['B'][1][i]
+            
+            # Move right to back (with rotation)
+            for i in range(3):
+                self.faces['B'][1][i] = self.faces['R'][1][i]
+            
+            # Move left to back
+            for i in range(3):
+                self.faces['R'][1][i] = self.faces['F'][1][i]
+            
+            # Move temp (original up) to front
+            for i in range(3):
+                self.faces['F'][1][i] = temp[i]
+        elif move == "E2":
+            self.move("E")
+            self.move("E")
+
+        elif move == "M":
+            temp = [self.faces['U'][i][1] for i in range(3)]
+            
+            # Move right to front (with rotation)
+            for i in range(3):
+                self.faces['U'][i][1] = self.faces['B'][i][1]
+            
+            # Move back to right (with rotation)
+            for i in range(3):
+                self.faces['B'][i][1] = self.faces['D'][2-i][1]
+            
+            # Move left to back
+            for i in range(3):
+                self.faces['D'][i][1] = self.faces['F'][i][1]
+            
+            # Move temp (original up) to front
+            for i in range(3):
+                self.faces['F'][i][1] = temp[i]
+        elif move == "M'":
+            temp = [self.faces['U'][i][1] for i in range(3)]
+            
+            # Move back to left (with rotation)
+            for i in range(3):
+                self.faces['U'][i][1] = self.faces['F'][i][1]
+            
+            # Move right to back (with rotation)
+            for i in range(3):
+                self.faces['F'][i][1] = self.faces['D'][i][1]
+            
+            # Move left to back
+            for i in range(3):
+                self.faces['D'][i][1] = self.faces['B'][2-i][1]
+            
+            # Move temp (original up) to front
+            for i in range(3):
+                self.faces['B'][2-i][1] = temp[i]
+        elif move == "M2":
+            self.move("M")
+            self.move("M")
+
+    def edges_orientation_heuristic(self):
+        """Calculate the number of incorrectly oriented edges."""
+        incorrect_edges = 0
+
+        # Define the edges and their correct orientation
+        edges = [
+                ('U', (0,1), 'B', (0,1)),  # UB
+                ('U', (1,2), 'R', (0,1)),  # UR
+                ('U', (2,1), 'F', (0,1)),  # UF
+                ('U', (1,0), 'L', (0,1)),  # UL
+                ('F', (1,0), 'L', (1,2)),  # FL
+                ('F', (1,2), 'R', (1,0)),  # FR
+                ('B', (1,0), 'L', (1,0)),  # BL
+                ('B', (1,2), 'R', (1,2)),  # BR
+                ('D', (0,1), 'F', (2,1)),  # DF
+                ('D', (1,2), 'R', (2,1)),  # DR
+                ('D', (2,1), 'B', (2,1)),  # DB
+                ('D', (1,0), 'L', (2,1)),  # DL
+            ]
+
+        for edge in edges:
+            face1, row1, col1, face2, row2, col2 = edge
+            color1 = self.faces[face1][row1][col1]
+            color2 = self.faces[face2][row2][col2]
+
+            # Check if the edge is oriented correctly
+            if not self.is_edge_oriented(color1, color2):
+                incorrect_edges += 1
+
+        return incorrect_edges
+
+    def is_edge_oriented(self, color1, color2):
+        """Check if an edge is oriented correctly based on its colors."""
+        # Define the correct orientation for each color pair
+        # Assuming White ('W') and Yellow ('Y') are the Up and Down colors
+        return (color1 in ['W', 'Y'] or color2 in ['W', 'Y'])
 
     def _cycle_edges(self, faces, index, reverse=False, vertical=False):
         """
@@ -375,5 +502,183 @@ class RubiksCube:
         """Makes the cube printable using print(cube)"""
         self.print_cube()
         return ""  # Return empty string since print_cube handles the output
+
+    def is_top_cross_solved(self):
+        # Check if all edges on top face match the center
+        center = self.faces['U'][1][1]
+        return (self.faces['U'][0][1] == center and 
+                self.faces['U'][1][0] == center and 
+                self.faces['U'][1][2] == center and 
+                self.faces['U'][2][1] == center)
+
+    def is_top_cross_line(self):
+        # Check if top cross forms a line
+        center = self.faces['U'][1][1]
+        return ((self.faces['U'][0][1] == center and self.faces['U'][2][1] == center) or 
+                (self.faces['U'][1][0] == center and self.faces['U'][1][2] == center))
+
+    def is_top_cross_L(self):
+        # Check if top cross forms an L shape
+        center = self.faces['U'][1][1]
+        return ((self.faces['U'][0][1] == center and self.faces['U'][1][0] == center) or
+                (self.faces['U'][0][1] == center and self.faces['U'][1][2] == center) or
+                (self.faces['U'][2][1] == center and self.faces['U'][1][0] == center) or
+                (self.faces['U'][2][1] == center and self.faces['U'][1][2] == center))
+
+    def is_top_cross_dot(self):
+        # Check if only center is the correct color (dot shape)
+        center = self.faces['U'][1][1]
+        edges = [self.faces['U'][0][1], self.faces['U'][1][0], 
+                self.faces['U'][1][2], self.faces['U'][2][1]]
+        return all(edge != center for edge in edges)
+
+    def is_f2l_corner_solved(self):
+        # Check if the front-right corner is correctly solved
+        front_center = self.faces['F'][1][1]
+        right_center = self.faces['R'][1][1]
+        down_center = self.faces['D'][1][1]
+        
+        corner_front = self.faces['F'][2][2]
+        corner_right = self.faces['R'][2][0]
+        corner_down = self.faces['D'][0][2]
+        
+        return (corner_front == front_center and 
+                corner_right == right_center and 
+                corner_down == down_center)
+
+    def is_f2l_edge_solved(self):
+        # Check if the front-right edge is correctly solved
+        front_center = self.faces['F'][1][1]
+        right_center = self.faces['R'][1][1]
+        
+        edge_front = self.faces['F'][1][2]
+        edge_right = self.faces['R'][1][0]
+        
+        return edge_front == front_center and edge_right == right_center
+
+    def get_top_edge_top(self):
+        return self.faces['U'][2][1]
+
+    def get_top_edge_front(self):
+        return self.faces['F'][0][1]
+
+    def get_back_edge_top(self):
+        return self.faces['U'][0][1]
+
+    def get_back_edge_back(self):
+        return self.faces['B'][0][1]
+
+    def get_front_center(self):
+        return self.faces['F'][1][1]
+
+    def get_right_center(self):
+        return self.faces['R'][1][1]
+
+    def get_back_center(self):
+        return self.faces['B'][1][1]
+
+    def get_left_center(self):
+        return self.faces['L'][1][1]
+
+    def get_top_center(self):
+        return self.faces['U'][1][1]
+
+    def get_bottom_center(self):
+        return self.faces['D'][1][1]
+
+    def get_front_color(self):
+        return self.faces['F'][2][1]
+
+    def get_right_color(self):
+        return self.faces['R'][1][2]
+
+    def get_left_color(self):
+        return self.faces['L'][1][0]
+
+    def get_back_color(self):
+        return self.faces['B'][0][1]
+
+    def get_bottom_color(self):
+        return self.faces['D'][0][1]
+
+    def is_f2l_edge_on_top(self):
+        # Check if target edge piece is on top layer
+        front_center = self.faces['F'][1][1]
+        right_center = self.faces['R'][1][1]
+        edge_colors = {self.faces['U'][2][1], self.faces['F'][0][1]}
+        return front_center in edge_colors or right_center in edge_colors
+
+    def is_f2l_corner_on_top(self):
+        # Check if target corner piece is on top layer
+        front_center = self.faces['F'][1][1]
+        right_center = self.faces['R'][1][1]
+        down_center = self.faces['D'][1][1]
+        corner_colors = {
+            self.faces['U'][2][2],
+            self.faces['F'][0][2],
+            self.faces['R'][0][0]
+        }
+        return (front_center in corner_colors or 
+                right_center in corner_colors or 
+                down_center in corner_colors)
+
+    def is_f2l_edge_inserted(self):
+        # Check if edge is inserted (may not be oriented correctly)
+        front_center = self.faces['F'][1][1]
+        right_center = self.faces['R'][1][1]
+        edge_colors = {self.faces['F'][1][2], self.faces['R'][1][0]}
+        return front_center in edge_colors and right_center in edge_colors
+
+    def is_f2l_corner_inserted(self):
+        # Check if corner is inserted (may not be oriented correctly)
+        front_center = self.faces['F'][1][1]
+        right_center = self.faces['R'][1][1]
+        down_center = self.faces['D'][1][1]
+        corner_colors = {
+            self.faces['F'][2][2],
+            self.faces['R'][2][0],
+            self.faces['D'][0][2]
+        }
+        return (front_center in corner_colors and 
+                right_center in corner_colors and 
+                down_center in corner_colors)
+
+    def is_f2l_done(self):
+        # Check if all F2L pairs are solved
+        centers = {
+            'F': self.faces['F'][1][1],
+            'R': self.faces['R'][1][1],
+            'B': self.faces['B'][1][1],
+            'L': self.faces['L'][1][1],
+            'D': self.faces['D'][1][1]
+        }
+        
+        # Check all edges
+        edges_solved = (
+            self.faces['F'][1][2] == centers['F'] and self.faces['R'][1][0] == centers['R'] and
+            self.faces['R'][1][2] == centers['R'] and self.faces['B'][1][0] == centers['B'] and
+            self.faces['B'][1][2] == centers['B'] and self.faces['L'][1][0] == centers['L'] and
+            self.faces['L'][1][2] == centers['L'] and self.faces['F'][1][0] == centers['F']
+        )
+        
+        # Check all corners
+        corners_solved = (
+            self.faces['F'][2][2] == centers['F'] and self.faces['R'][2][0] == centers['R'] and
+            self.faces['R'][2][2] == centers['R'] and self.faces['B'][2][0] == centers['B'] and
+            self.faces['B'][2][2] == centers['B'] and self.faces['L'][2][0] == centers['L'] and
+            self.faces['L'][2][2] == centers['L'] and self.faces['F'][2][0] == centers['F']
+        )
+        
+        return edges_solved and corners_solved
+
+    def is_solved(self):
+        # Check if entire cube is solved
+        for face in self.faces:
+            center = self.faces[face][1][1]
+            for row in self.faces[face]:
+                for cell in row:
+                    if cell != center:
+                        return False
+        return True
 
 
