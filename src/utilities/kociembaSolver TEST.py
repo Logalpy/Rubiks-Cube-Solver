@@ -1,5 +1,5 @@
 import kociemba
-from flask import Flask, reqpuest, jsonify, make_response
+from flask import Flask, request, jsonify, make_response
 from flask_cors import CORS
 
 app = Flask(__name__)
@@ -52,7 +52,6 @@ def solve_cube(cube_data):
                         for face in face_order)
     translation_table = str.maketrans(translation_dict)
     translated_solver = solver.translate(translation_table)
-    
     print(kociemba.solve(translated_solver))
 
 

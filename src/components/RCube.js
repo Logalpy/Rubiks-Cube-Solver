@@ -13,8 +13,8 @@ class RCube extends Component {
         super(props);
         this.cubeRefs = Array(27).fill().map(() => React.createRef());
         this.domRef = React.createRef();
-        
-        
+
+
         this.state = {
             positions: [
                 [0, 0, 0],
@@ -48,9 +48,9 @@ class RCube extends Component {
                 [cubeWidth, cubeWidth, cubeWidth],
             ],
             touchStarted: false,
-            mousePoint: {x: 0, y: 0},
-            angleOfRotation: Array(27).fill(0), 
-            rotationVector: Array(27).fill().map(() => [1,0,0])
+            mousePoint: { x: 0, y: 0 },
+            angleOfRotation: Array(27).fill(0),
+            rotationVector: Array(27).fill().map(() => [1, 0, 0])
         };
         console.log('Initial positions:', this.state.positions);
         this.onTouchStart = this.onTouchStart.bind(this);
@@ -90,23 +90,23 @@ class RCube extends Component {
             [cubeWidth, -cubeWidth, cubeWidth],
             [cubeWidth, cubeWidth, cubeWidth]
         ];
-    
+
         this.setState({
-          positions: initialPositions,
-          angleOfRotation: Array(27).fill(0),
-          rotationVector: Array(27).fill().map(() => [1, 0, 0])
+            positions: initialPositions,
+            angleOfRotation: Array(27).fill(0),
+            rotationVector: Array(27).fill().map(() => [1, 0, 0])
         });
-      };
+    };
 
     componentDidMount() {
         if (this.domRef.current) {
             this.domRef.current.addEventListener('mouseup', this.onTouchEnd);
             this.domRef.current.addEventListener('touchend', this.onTouchEnd);
             this.domRef.current.addEventListener('touchcancel', this.onTouchEnd);
-            
+
         }
-        
-        this.rotateCubeSpace(120, 0);
+
+
     }
 
     componentWillUnmount() {
@@ -124,47 +124,47 @@ class RCube extends Component {
         ];
     }
 
-    
 
-    
+
+
     getCubeState = () => {
         const faceStructure = {
-          front: Array(3).fill().map(() => Array(3).fill('')),
-          back: Array(3).fill().map(() => Array(3).fill('')),
-          left: Array(3).fill().map(() => Array(3).fill('')),
-          right: Array(3).fill().map(() => Array(3).fill('')),
-          top: Array(3).fill().map(() => Array(3).fill('')),
-          bottom: Array(3).fill().map(() => Array(3).fill(''))
+            front: Array(3).fill().map(() => Array(3).fill('')),
+            back: Array(3).fill().map(() => Array(3).fill('')),
+            left: Array(3).fill().map(() => Array(3).fill('')),
+            right: Array(3).fill().map(() => Array(3).fill('')),
+            top: Array(3).fill().map(() => Array(3).fill('')),
+            bottom: Array(3).fill().map(() => Array(3).fill(''))
         };
-      
+
         this.state.positions.forEach((position, index) => {
-        const cubeRef = this.cubeRefs[index] ? this.cubeRefs[index].current : null;
-          if (!cubeRef) return;
-      
-          const colors = cubeRef.getFaceColors ? cubeRef.getFaceColors() : {};
-          const [x, y, z] = position.map(coord => coord / cubeWidth);
-      
-          // Direct mapping since we adjust to original position
-          if (z === 1) faceStructure.front[y + 1][x + 1] = colors.front;
-          if (z === -1) faceStructure.back[1 - y][x + 1] = colors.back;
-          if (x === -1) faceStructure.left[z + 1][1 - y] = colors.left;
-          if (x === 1) faceStructure.right[z + 1][y + 1] = colors.right;
-          if (y === -1) faceStructure.top[z + 1][x + 1] = colors.top;
-          if (y === 1) faceStructure.bottom[1- z][x + 1] = colors.bottom;
+            const cubeRef = this.cubeRefs[index] ? this.cubeRefs[index].current : null;
+            if (!cubeRef) return;
+
+            const colors = cubeRef.getFaceColors ? cubeRef.getFaceColors() : {};
+            const [x, y, z] = position.map(coord => coord / cubeWidth);
+
+            // Direct mapping since we adjust to original position
+            if (z === 1) faceStructure.front[y + 1][x + 1] = colors.front;
+            if (z === -1) faceStructure.back[1 - y][x + 1] = colors.back;
+            if (x === -1) faceStructure.left[z + 1][1 - y] = colors.left;
+            if (x === 1) faceStructure.right[z + 1][y + 1] = colors.right;
+            if (y === -1) faceStructure.top[z + 1][x + 1] = colors.top;
+            if (y === 1) faceStructure.bottom[1 - z][x + 1] = colors.bottom;
         });
         const BackEndArray = this.replaceHexWithColorNames(faceStructure);
         return BackEndArray;
-      };
+    };
 
 
-      replaceHexWithColorNames = (faceStructure) => {
+    replaceHexWithColorNames = (faceStructure) => {
         const colorMap = {
-          '#B90000': 'R',
-          '#0045AD': 'B',
-          '#FF5900': 'O',
-          '#FFFFFF': 'W',
-          '#FFD500': 'Y',
-          '#009B48': 'G'
+            '#B90000': 'R',
+            '#0045AD': 'B',
+            '#FF5900': 'O',
+            '#FFFFFF': 'W',
+            '#FFD500': 'Y',
+            '#009B48': 'G'
         };
         const convertedStructure = {};
 
@@ -174,16 +174,16 @@ class RCube extends Component {
         }
         return convertedStructure;
     };
-      
+
 
 
     onTouchStart(eve) {
         eve.preventDefault();
         this.setState({
             touchStarted: true,
-            mousePoint: { 
-                x: getTouchPositions(eve).clientX, 
-                y: getTouchPositions(eve).clientY 
+            mousePoint: {
+                x: getTouchPositions(eve).clientX,
+                y: getTouchPositions(eve).clientY
             }
         });
     }
@@ -199,10 +199,10 @@ class RCube extends Component {
                 calcPosition(this.state.positions[i], [0, 1, 0], diffX);
 
             const rotationResult = Math.abs(diffY) > Math.abs(diffX) ?
-                calculateResultantAngle(-diffY, [1, 0, 0], 
-                this.state.rotationVector[i], this.state.angleOfRotation[i]) :
-                calculateResultantAngle(diffX, [0, 1, 0], 
-                this.state.rotationVector[i], this.state.angleOfRotation[i]);
+                calculateResultantAngle(-diffY, [1, 0, 0],
+                    this.state.rotationVector[i], this.state.angleOfRotation[i]) :
+                calculateResultantAngle(diffX, [0, 1, 0],
+                    this.state.rotationVector[i], this.state.angleOfRotation[i]);
 
             angleOfRotationArr[i] = rotationResult.gama;
             rotationVectorArr[i] = rotationResult.rotationVector;
@@ -222,34 +222,34 @@ class RCube extends Component {
         const diffY = clientY - this.state.mousePoint.y;
         const diffX = clientX - this.state.mousePoint.x;
 
-        this.setState({ 
-            mousePoint: { x: clientX, y: clientY } 
+        this.setState({
+            mousePoint: { x: clientX, y: clientY }
         }, () => {
-            this.rotateCubeSpace(diffX, diffY);
+            this.rotateCubeSpace(0.8 * diffX, 0.8 * diffY);
         });
     }
 
     onTouchEnd() {
-        this.setState({ 
-            touchStarted: false, 
-            mousePoint: { x: 0, y: 0 } 
+        this.setState({
+            touchStarted: false,
+            mousePoint: { x: 0, y: 0 }
         });
     }
 
-    
+
 
     getScalingFactor() {
         const minSize = Math.min(window.innerHeight, window.innerWidth);
-        return Math.min(Math.max(minSize/300, 1), 1.5);
+        return Math.min(Math.max(minSize / 300, 1), 1.5);
     }
 
-    
+
 
     render() {
         console.log('Cube instance rendering');
         return (
             <div ref={this.domRef}
-                
+
                 className="cube-container"
                 style={{ transform: `scale(${this.getScalingFactor()})` }}
                 onMouseDown={this.onTouchStart}
@@ -265,7 +265,7 @@ class RCube extends Component {
                         onFaceClick={this.handleFaceClick}
                     />
                 ))}
-                
+
             </div>
 
         );
@@ -274,4 +274,4 @@ class RCube extends Component {
 
 export default forwardRef((props, ref) => (
     <RCube {...props} ref={ref} />
-  ));
+));

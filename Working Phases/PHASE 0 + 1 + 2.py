@@ -1,4 +1,4 @@
-from cube import RubiksCube
+from utilities.cube import RubiksCube
 
 class ThistlethwaiteSolver:
     def __init__(self, cube: RubiksCube):
@@ -95,11 +95,7 @@ class ThistlethwaiteSolver:
         return all(ch=='0' for ch in h)
 
     def get_phase2_state(self):
-        """Check edge positions - edges must be in their correct slice.
-        In Phase 2:
-        - E slice edges (middle layer) must only have F/B/L/R colors
-        - M slice edges must have at least one U/D color
-        - S slice edges must have at least one U/D color"""
+        """Check edge positions - edges must be in their correct slice."""
         def check_edge_colors(face1, pos1, face2, pos2, allowed_colors, label):
             sticker1 = self.cube.faces[face1][pos1[0]][pos1[1]]
             sticker2 = self.cube.faces[face2][pos2[0]][pos2[1]]
@@ -107,47 +103,46 @@ class ThistlethwaiteSolver:
                 print(f"Misoriented {label} edge: {face1}{pos1}-{face2}{pos2} stickers: {sticker1}, {sticker2}")
                 return False
             return True
+
         def has_ud_color(face1, pos1, face2, pos2, label):
             sticker1 = self.cube.faces[face1][pos1[0]][pos1[1]]
             sticker2 = self.cube.faces[face2][pos2[0]][pos2[1]]
-            if not (sticker1 in ['W', 'Y'] or sticker2 in ['W', 'Y']):
+            if not (sticker1 in ['W','Y'] or sticker2 in ['W','Y']):
                 print(f"Misoriented {label} edge: {face1}{pos1}-{face2}{pos2} stickers: {sticker1}, {sticker2}")
                 return False
             return True
-        # E slice edges (middle layer)
-        e_slice_colors = ['G', 'B', 'O', 'R']
+
+        # E‑slice edges must only have F/B/L/R colors
+        e_slice_colors = ['G','B','O','R']
         e_slice = [
-            ('F', (1,0), 'L', (1,2)),  # FL
-            ('F', (1,2), 'R', (1,0)),  # FR
-            ('B', (1,0), 'L', (1,0)),  # BL
-            ('B', (1,2), 'R', (1,2)),  # BR
+            ('F',(1,0),'L',(1,2)), ('F',(1,2),'R',(1,0)),
+            ('B',(1,0),'L',(1,0)), ('B',(1,2),'R',(1,2)),
         ]
         e_mis = 0
-        for edge in e_slice:
-            if not check_edge_colors(*edge, e_slice_colors, label='E-slice'):
+        for f1,p1,f2,p2 in e_slice:
+            if not check_edge_colors(f1,p1,f2,p2,e_slice_colors,'E‑slice'):
                 e_mis += 1
-        # M slice edges (must have U/D color)
+
+        # M‑slice edges must have at least one U/D color
         m_slice = [
-            ('U', (1,0), 'L', (0,1)),  # UL
-            ('D', (1,0), 'L', (2,1)),  # DL
-            ('U', (1,2), 'R', (0,1)),  # UR
-            ('D', (1,2), 'R', (2,1)),  # DR
+            ('U',(1,0),'L',(0,1)), ('D',(1,0),'L',(2,1)),
+            ('U',(1,2),'R',(0,1)), ('D',(1,2),'R',(2,1)),
         ]
         m_mis = 0
-        for edge in m_slice:
-            if not has_ud_color(*edge, label='M-slice'):
+        for f1,p1,f2,p2 in m_slice:
+            if not has_ud_color(f1,p1,f2,p2,'M‑slice'):
                 m_mis += 1
-        # S slice edges (must have U/D color)
+
+        # S‑slice edges must have at least one U/D color
         s_slice = [
-            ('U', (2,1), 'F', (0,1)),  # UF
-            ('D', (0,1), 'F', (2,1)),  # DF
-            ('U', (0,1), 'B', (0,1)),  # UB
-            ('D', (2,1), 'B', (2,1)),  # DB
+            ('U',(2,1),'F',(0,1)), ('D',(0,1),'F',(2,1)),
+            ('U',(0,1),'B',(0,1)), ('D',(2,1),'B',(2,1)),
         ]
         s_mis = 0
-        for edge in s_slice:
-            if not has_ud_color(*edge, label='S-slice'):
+        for f1,p1,f2,p2 in s_slice:
+            if not has_ud_color(f1,p1,f2,p2,'S‑slice'):
                 s_mis += 1
+
         total_mis = e_mis + m_mis + s_mis
         print(f"Total misoriented phase 2 edges: {total_mis}")
         return total_mis == 0

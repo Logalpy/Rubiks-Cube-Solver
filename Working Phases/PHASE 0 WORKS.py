@@ -1,4 +1,4 @@
-from cube import RubiksCube
+from utilities.cube import RubiksCube
 
 class ThistlethwaiteSolver:
     def __init__(self, cube: RubiksCube):

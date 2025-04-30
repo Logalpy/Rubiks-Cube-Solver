@@ -1,5 +1,5 @@
 /** Helper functions to calculate the position of each cube, in 3D space. */
-/** Found helper functions online */
+/** Found helper functions online stack-overflow*/
 
 export const toRadians = (angle) => (angle * (Math.PI / 180));
 export const toDegrees = (angle) => (angle * (180 / Math.PI));

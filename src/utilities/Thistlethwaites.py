@@ -1,24 +1,23 @@
 from cube import RubiksCube
+from flask import Flask, request, jsonify, make_response
+from flask_cors import CORS
+
+app = Flask(__name__)
+CORS(app, resources={
+    r"/solve1": {"origins": "http://localhost:3000"},
+    r"/solve2": {"origins": "http://localhost:3000"}
+})
 
 class ThistlethwaiteSolver:
-    def __init__(self, cube: RubiksCube):
-        if isinstance(cube, dict):
-            cube_obj = RubiksCube()
-            mapping = {
-                'top': 'U',
-                'front': 'F',
-                'bottom': 'D',
-                'left': 'L',
-                'right': 'R',
-                'back': 'B'
-            }
-            for key, face in mapping.items():
-                # deep‑copy each 3×3 array into cube_obj.faces
-                cube_obj.faces[face] = [row[:] for row in cube[key]]
-            self.cube = cube_obj
+    def __init__(self, cube_data=None):
+        # Initialize RubiksCube instance from input or empty state
+        if isinstance(cube_data, RubiksCube):
+            self.cube = cube_data
         else:
-            self.cube = cube if cube else RubiksCube()
-
+            self.cube = RubiksCube()
+            # Load cube faces if provided as dict
+            if isinstance(cube_data, dict):
+                self.cube.load_from_cube_data(cube_data)
         self.SLICE_MOVE_THRESHOLD = 45
         # Define standard face colors
         self.face_colors = {'U': 'W', 'D': 'Y', 'F': 'G', 'B': 'B', 'L': 'O', 'R': 'R'}
@@ -31,30 +30,22 @@ class ThistlethwaiteSolver:
              "M", "M'", "M2","E","E'","E2","S","S'","S2"],  # Added slice moves for Phase 0
             
             # Phase 1: Quarter turns of U/D, half turns of others
-            ["L", "R'", "F", "B", "U2'", "D2", "F2", "F'"
-             "L'", "L2", "R'", "R2", "B'", "B2",
+            ["U", "U'", "U2", "D", "D'", "D2", 
+             "R2", "L2", "F2", "B2",
              "M2", "E2", "S2"],  # Half turns for edge slice positioning
             
-            # Phase 2
-            ["L", "R", "L'", "R'", "F2", "B2", "U2", "D2"],     
+            # Phase 2: All moves needed to fix R U R' case
+            # After R U R', we need either U' R' to undo or R U to complete
+            ["R", "R'", "U", "U'",  # Quarter turns needed to fix the case
+             "R2", "U2", "D2",      # Half turns for general edge slice positioning
+             "F2", "B2", "L2"],     # Additional half turns if needed
+            
             # Phase 3: Allow quarter turns of U/D and half turns of others
             # Include more moves to handle parity cases
-            ["U2", "D2",  # U/D moves
+            ["U", "U'", "U2", "D", "D'", "D2",  # U/D moves
              "R2", "L2", "F2", "B2"]  
         ]
-    
-
-    def solve(self):
-        """Run all 4 Thistlethwaite phases and return the full move list."""
-        self.step_moves_list = []
-        full = []
-        for phase in range(4):
-            moves = self.solve_phase(phase)
-            self.step_moves_list.append(moves)
-            full.extend(moves)
-        return full
-
-
+        
     def get_phase0_state(self):
         """
         Check edge orientations according to Thistlethwaite's rules:
@@ -307,39 +298,45 @@ class ThistlethwaiteSolver:
             return ''.join(bits)
 
         elif phase == 2:
-            bits = []
-            # E‑slice edges: both stickers ∈ {G,B,O,R}
-            for f1,p1,f2,p2 in [
-                ('F',(1,0),'L',(1,2)), ('F',(1,2),'R',(1,0)),
-                ('B',(1,0),'L',(1,0)), ('B',(1,2),'R',(1,2)),
-            ]:
-                s1 = self.cube.faces[f1][p1[0]][p1[1]]
-                s2 = self.cube.faces[f2][p2[0]][p2[1]]
-                ok = set((s1,s2)).issubset(set("GBOR"))
-                bits.append('0' if ok else '1')
-
-            # M‑slice edges: at least one sticker ∈ {W,Y}
-            for f1,p1,f2,p2 in [
-                ('U',(1,0),'L',(0,1)), ('D',(1,0),'L',(2,1)),
-                ('U',(1,2),'R',(0,1)), ('D',(1,2),'R',(2,1)),
-            ]:
-                s1 = self.cube.faces[f1][p1[0]][p1[1]]
-                s2 = self.cube.faces[f2][p2[0]][p2[1]]
-                ok = (s1 in "WY") or (s2 in "WY")
-                bits.append('0' if ok else '1')
-
-            # S‑slice edges: at least one sticker ∈ {W,Y}
-            for f1,p1,f2,p2 in [
-                ('U',(2,1),'F',(0,1)), ('D',(0,1),'F',(2,1)),
-                ('U',(0,1),'B',(0,1)), ('D',(2,1),'B',(2,1)),
-            ]:
-                s1 = self.cube.faces[f1][p1[0]][p1[1]]
-                s2 = self.cube.faces[f2][p2[0]][p2[1]]
-                ok = (s1 in "WY") or (s2 in "WY")
-                bits.append('0' if ok else '1')
-
-            return "".join(bits)
-        
+            # For phase 2, encode slice edge positions (0 if in correct slice, 1 otherwise)
+            # E slice edges (should only have F/B/L/R colors)
+            e_slice_colors = ['G', 'B', 'O', 'R']
+            e_edges = [
+                ('F', (1,0), 'L', (1,2)),  # FL
+                ('F', (1,2), 'R', (1,0)),  # FR
+                ('B', (1,0), 'L', (1,0)),  # BL
+                ('B', (1,2), 'R', (1,2)),  # BR
+            ]
+            e_slice = []
+            for face1, pos1, face2, pos2 in e_edges:
+                s1 = self.cube.faces[face1][pos1[0]][pos1[1]]
+                s2 = self.cube.faces[face2][pos2[0]][pos2[1]]
+                e_slice.append('0' if s1 in e_slice_colors and s2 in e_slice_colors else '1')
+            # M slice edges (should have one U/D color)
+            m_slice = [
+                ('U', (1,0), 'L', (0,1)),  # UL
+                ('D', (1,0), 'L', (2,1)),  # DL
+                ('U', (1,2), 'R', (0,1)),  # UR
+                ('D', (1,2), 'R', (2,1)),  # DR
+            ]
+            m_slice_bits = []
+            for face1, pos1, face2, pos2 in m_slice:
+                s1 = self.cube.faces[face1][pos1[0]][pos1[1]]
+                s2 = self.cube.faces[face2][pos2[0]][pos2[1]]
+                m_slice_bits.append('0' if (s1 in ['W','Y'] or s2 in ['W','Y']) else '1')
+            # S slice edges (should have one U/D color)
+            s_slice = [
+                ('U', (2,1), 'F', (0,1)),  # UF
+                ('D', (0,1), 'F', (2,1)),  # DF
+                ('U', (0,1), 'B', (0,1)),  # UB
+                ('D', (2,1), 'B', (2,1)),  # DB
+            ]
+            s_slice_bits = []
+            for face1, pos1, face2, pos2 in s_slice:
+                s1 = self.cube.faces[face1][pos1[0]][pos1[1]]
+                s2 = self.cube.faces[face2][pos2[0]][pos2[1]]
+                s_slice_bits.append('0' if (s1 in ['W','Y'] or s2 in ['W','Y']) else '1')
+            return ''.join(e_slice + m_slice_bits + s_slice_bits)
         elif phase == 3:
             # Use a full‐cube facelet string to detect repeats
             # faces in fixed order U,D,F,B,L,R
@@ -408,12 +405,12 @@ class ThistlethwaiteSolver:
         if base_move == last_base:
             return True
             
-        # Skip opposite face moves in wrong order (e.g., U after D)
+        # Skip opposite face moves in wrong order 
         opposites = {'U':'D', 'D':'U', 'F':'B', 'B':'F', 'L':'R', 'R':'L', 
                     'M':'S', 'S':'M', 'E':'M'}
         if base_move in opposites and last_base == opposites[base_move]:
             # For opposite faces, we can allow different move types
-            # e.g., allow U' after D2 but not U after D
+
             if last_move.endswith("2") or move.endswith("2"):
                 return False
             return True
@@ -435,15 +432,10 @@ class ThistlethwaiteSolver:
                         misplaced += 1
         # at least one move if anything is wrong
         return max(1, misplaced // 12)
-    
-    def all_edges_bad(self):
-        """Return True if all 12 edges are 'BAD' (i.e. mis‐oriented == '1')."""
-        bits = self.get_phase0_edge_orientations()
-        return bits.count('1') == len(bits)
 
     def solve_phase(self, phase):
         """Solve a specific phase of the Thistlethwaite algorithm using iterative deepening with improved state tracking"""
-        max_moves = [15, 10, 24, 18]  # Maximum moves per phase
+        max_moves = [15, 10, 13, 18]  # Maximum moves per phase
         max_depth = max_moves[phase]
         current_moves = []
         solution_found = False
@@ -460,10 +452,7 @@ class ThistlethwaiteSolver:
 
         def check_phase_solved():
             if phase == 0:
-                if self.all_edges_bad():
-                    return ["D", "B", "F", "U", "R'", "L'", "D'"]
-                else:
-                    return self.get_phase0_state()
+                return self.get_phase0_state()
             elif phase == 1:
                 return self.get_phase1_state()
             elif phase == 2:
@@ -565,3 +554,38 @@ class ThistlethwaiteSolver:
         elif move.endswith("2"): # Double move like "U2" stays "U2"
             return move
         return move
+    
+
+@app.route('/solve1', methods=['POST'])
+def solve_cube():
+    try:
+        cube_data = request.json
+        cube = RubiksCube()
+        cube.load_from_cube_data(cube_data)
+        solver = ThistlethwaiteSolver(cube)
+        solution1, solution2, solution3, solution4 = [], [], [], []
+        solution1 = solver.solve_phase(0)
+        solution2 = solver.solve_phase(1)
+        solution3 = solver.solve_phase(2)
+        solution4 = solver.solve_phase(3)
+        all_moves = solution1 + solution2 + solution3 + solution4
+        moves_str = ' '.join(all_moves)
+        print(all_moves)
+        response1 = jsonify({'status': 'success', 'solution': moves_str})
+        response1.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
+        return response1
+    except Exception as e:
+        print("Error:", str(e))
+        response1 = jsonify({'status': 'error', 'message': str(e)})
+        response1.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
+        return response1, 400
+    
+@app.route('/solve1', methods=['OPTIONS'])
+def solve_cube_options():
+    response = jsonify()
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+    response.headers.add('Access-Control-Allow-Methods', 'POST')
+    return response
+    
+if __name__ == '__main__':
+    app.run(host = '0.0.0.0', port=5000, debug = True)

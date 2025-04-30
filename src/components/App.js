@@ -1,49 +1,39 @@
-import React, { Component, useRef, useState, useEffect } from 'react';
+import React, { useRef, useState } from 'react';
 import CubeContainer from './RCube';
 import Button from './Button';
 
 function App() {
   const cubeContainerRef = useRef(null);
   const [solutionText, setSolutionText] = useState('');
-  const [selectedSolver, setSelectedSolver] = useState('kociemba'); // 'cfop' or 'kociemba'
-  const [cfopSolution, setCfopSolution] = useState('');
+  const [selectedSolver, setSelectedSolver] = useState('kociemba'); // 'TT' or 'kociemba'
+  const [TTSolution, setTTSolution] = useState('');
   const [kociembaSolution, setKociembaSolution] = useState('');
 
 
   const handleSolveClick = async () => {
     if (!cubeContainerRef.current) return;
-  
+
     try {
       // Reset to default position
       cubeContainerRef.current.resetToDefaultPosition();
-      
+
       // Wait for state update and cube reset
       await new Promise(resolve => setTimeout(resolve, 100));
-      
+
       // Get updated cube state
       const cubeState = cubeContainerRef.current.getCubeState();
       console.log('Cube State:', cubeState);
-  
-      // Send to backend
-      const [res1, res2] = await Promise.all([
-        fetch('http://localhost:5000/solve1', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(cubeState)
-        }),
-        fetch('http://localhost:5001/solve2', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(cubeState)
-        })
-      ]);
 
-      const result1 = await res1.json();
-      const result2 = await res2.json();
-  
-      setCfopSolution(result1.solution || 'No CFOP Solution found')
-      setKociembaSolution(result2.solution || 'No Kociemba solution found');
-  
+      // Send to backend
+      const res = await fetch('http://localhost:5001/solve2', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cubeState)
+      });
+
+      const result = await res.json();
+      setKociembaSolution(result.solution || 'No Kociemba solution found');
+
     } catch (error) {
       console.error('Operation Failed:', error.message);
     }
@@ -61,27 +51,27 @@ function App() {
 
       {/* Control buttons */}
       <div className="button-container">
-      <Button 
-        className={"controls ${selectedSolver === 'cfop' ? 'active' : ''}"}
-        onClick={() =>{
-          setSelectedSolver('cfop');
-          setSolutionText(cfopSolution);
-        }}
+        <Button
+          className={"controls ${selectedSolver === 'TT' ? 'active' : ''}"}
+          onClick={() => {
+            setSelectedSolver('TT');
+            setSolutionText(TTSolution);
+          }}
         >
-          CFOP
+          Thistlethwaite's
         </Button>
-        
-        <Button 
-        className={"controls ${selectedSolver === 'kociemba' ? 'active' : ''}"}
-        onClick={() =>{
-          setSelectedSolver('kociemba');
-          setSolutionText(kociembaSolution);
-        }}
+
+        <Button
+          className={"controls ${selectedSolver === 'kociemba' ? 'active' : ''}"}
+          onClick={() => {
+            setSelectedSolver('kociemba');
+            setSolutionText(kociembaSolution);
+          }}
         >
           Kociemba
         </Button>
 
-        <button 
+        <button
           className="solver"
           onClick={handleSolveClick}
         >
@@ -91,11 +81,11 @@ function App() {
       <div className="solution-box">
         <textarea
           readOnly
-          value={solutionText}
+          value={kociembaSolution}
           placeholder="Click and hold to rotate the cube, click each cubie face to change its color. When finished, click Solve! to generate solutions"
           rows="4"
         />
-        <button 
+        <button
           className="copy-btn"
           onClick={() => navigator.clipboard.writeText(solutionText)}
         >
